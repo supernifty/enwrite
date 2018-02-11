@@ -59,6 +59,7 @@ ul {
   height: 100%;
   width: 100%;
   border-color: #ccc;
+  font-size: 14px;
 }
 
 #preview_content {

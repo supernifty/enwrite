@@ -19,3 +19,13 @@ pip install -U psycopg2
 ```
 python3 main.py
 ```
+
+# Roadmap
+We hope to add the following:
+* Collaboration
+* Math formula
+* Markdown and Latex support
+* Reference management
+* Checkpointing, restore
+* Attachments, notes
+* Indexing, searching
