@@ -20,7 +20,7 @@ var
     // markdown renderer
       var renderer = new marked.Renderer();
       renderer.table = function(header, body) {
-        return "<table class='table table-striped'><thead>" +
+        return "<table class='pure-table pure-table-striped'><thead>" +
             header +
             "</thead><tbody>" +
             body +
@@ -210,8 +210,8 @@ var
     return list.filter(e => e.id !== id);
   },
 
-  set_status = function(m) {
-    w2ui.main_layout.content('bottom', escape_html(m));
+  set_status = function(m, escaped) {
+    w2ui.main_layout.content('bottom', escaped ? m : escape_html(m));
   },
 
   update_project_menu = function() {
@@ -228,7 +228,7 @@ var
 
   close_project = function() {
     update_project_menu();
-    set_status('Closed project "' + escape_html(g.project_name) + '"');
+    set_status('Closed project "' + g.project_name + '"', true);
   },
 
   delete_project = function() {
@@ -249,7 +249,7 @@ var
   deleted_project = function(data) {
     if (data.status == 'success') {
       update_project_menu();
-      set_status('Deleted project "' + escape_html(g.project_name) + '"');
+      set_status('Deleted project "' + g.project_name + '"', true);
     }
     else {
       show_error(data.message);
@@ -345,9 +345,9 @@ var
     w2ui.main_sidebar.refresh();
   },
 
-  open_project = function(id, name) {
-    w2ui.main_toolbar.get('menu_file').items.push({ text: 'Close Project ' + escape_html(name), id: 'close_project', icon: 'fas fa-book'}); 
-    w2ui.main_toolbar.get('menu_file').items.push({ text: 'Delete Project ' + escape_html(name), id: 'delete_project', icon: 'fas fa-book'}); 
+  open_project = function(id, name) { // note that name is already escaped
+    w2ui.main_toolbar.get('menu_file').items.push({ text: 'Close Project ' + name, id: 'close_project', icon: 'fas fa-book'}); 
+    w2ui.main_toolbar.get('menu_file').items.push({ text: 'Delete Project ' + name, id: 'delete_project', icon: 'fas fa-book'}); 
     w2ui.main_toolbar.insert('menu_last', { type: 'menu', text: 'Add', id: 'menu_add', icon: 'fas fa-plus', items: [
       { text: 'New Folder', id: 'add_folder', icon: 'fas fa-folder'},
       { text: 'New Document', id: 'add_document', icon: 'fas fa-file'}
@@ -367,7 +367,7 @@ var
     remove_sidebar_nodes();
     w2ui.main_sidebar.refresh();
     // TODO load folders
-    set_status('Opened project "' + escape_html(g.project_name) + '"');
+    set_status('Opened project "' + g.project_name + '"', true);
     get_documents();
   },
 

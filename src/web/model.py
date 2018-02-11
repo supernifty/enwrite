@@ -20,7 +20,7 @@ def generate_id():
   return str(uuid.uuid4())
 
 class User(Base):
-  __tablename__ = 'user'
+  __tablename__ = 'app_user'
   id = sqlalchemy.Column(sqlalchemy.String, primary_key=True, default=generate_id)
   created = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.utcnow, nullable=False)
   email = sqlalchemy.Column(sqlalchemy.String(250), nullable=False)
@@ -34,7 +34,7 @@ class Project(Base):
   renderer = sqlalchemy.Column(sqlalchemy.String(8), nullable=False)
 
   # owner of this project
-  owner_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey("user.id"), nullable=False)
+  owner_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey("app_user.id"), nullable=False)
   owner = sqlalchemy.orm.relationship('User', backref=sqlalchemy.orm.backref('projects', lazy='dynamic'))
 
   def __json__(self):

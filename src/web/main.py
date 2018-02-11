@@ -147,7 +147,7 @@ def about():
 def authorized():
     result = authenticator.authorized(flask.session, db())
     if result is None:
-        return flask.redirect(flask.url_for('main'))
+        return flask.redirect(flask.url_for('home'))
     else:
         return result # todo: error page
 
