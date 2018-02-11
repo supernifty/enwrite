@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NiftyWrite - a tool to manage large writing projects</title>
+
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='w2ui.css', v='180203a') }}" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main.css', v='180203') }}" />
+
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script type="text/javascript" src="http://w2ui.com/src/w2ui-1.5.rc1.min.js"></script>
+    <script defer src="https://use.fontawesome.com/releases/v5.0.6/js/all.js"></script>
+
+</head>
+<body>
+    <div id="main_layout"></div>
+</body>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-MML-AM_CHTML'></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/0.3.9/marked.min.js"></script>
+<script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='main.js', v='180203') }}"></script>
+<script>
+  $(document).ready(function () {
+    init();
+  });
+</script>
+</html>
