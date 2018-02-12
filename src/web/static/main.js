@@ -2,7 +2,8 @@ var
   g = {
     'sidebar_target': null,
     'document_target': null,
-    'tab_cache': {}
+    'tab_cache': {},
+    'queue': []
   },
 
   ENTITY_MAP = {
@@ -91,19 +92,34 @@ var
   },
 
   select_tab = function(ev) {
+    $("#editable_content").off('change keyup paste mouseup', content_changed);
+
+    // save changes to old tab
+    var current;
+    if (g.document_target != null) {
+      current = g.tab_cache['tab_' + g.document_target];
+      current.content = $('#editable_content').val();
+    }
+
     // update html
     g.document_target = ev.target.substr(4); // set selected document (tab_)
     w2ui.main_layout.content('main', '<textarea id="editable_content"></textarea><div id="preview_content" style="display: none"></div>')
-    // update menu
-    w2ui.main_toolbar.insert('menu_last', { type: 'menu', id: 'menu_document', caption: 'Document', img: 'icon-page', items: [
-      { text: 'Edit', id: 'edit_document' },
-      { text: 'Preview', id: 'preview_document' },
-      { text: 'Save', id: 'save_document' }
-    ]});
-    // TODO this will reset content
-    var current = g.tab_cache['tab_' + g.document_target];
+    current = g.tab_cache['tab_' + g.document_target];
     $('#editable_content').val(current.content);
-    edit_document();
+    $('#editable_content').on('change keyup paste mouseup', content_changed);
+    preview_document();
+  },
+
+  content_changed = function(ev) {
+    // mark tab as unsaved
+    var current = g.tab_cache['tab_' + g.document_target];
+    if (current.unsaved != true && current.content != $('#editable_content').val()) { // undefined or false
+      current.unsaved = true;
+      g.unsaved_count += 1;
+      set_status(g.unsaved_count + ' unsaved document(s)');
+      w2ui.main_layout_main_tabs.get('tab_' + g.document_target).text = escape_html(current.name) + ' *';
+      w2ui.main_layout_main_tabs.refresh();
+    }
   },
 
   edit_document = function() {
@@ -112,7 +128,6 @@ var
   },
 
   preview_document = function() {
-    console.log(escape_html($('#editable_content').val()));
     $('#preview_content').html(marked(escape_html($('#editable_content').val())));
     MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
     $('#editable_content').hide();
@@ -120,17 +135,40 @@ var
   },
 
   close_tab = function(ev) {
-    // TODO check saved
+    // check saved
+    var current = g.tab_cache['tab_' + g.document_target];
+    if (current.unsaved == true) {
+      if (!confirm('This document has unsaved changed. Are you sure?')) {
+        ev.preventDefault();
+        return
+      }
+    }
+    
     // clear cache
     delete g.tab_cache[ev.target];
-    w2ui['main_layout'].content('main', '')
-    w2ui.main_toolbar.remove('menu_document');
+    w2ui.main_layout.content('main', '');
+    g.document_target = null;
+
+    // select another tab
+    if (Object.keys(g.tab_cache).length > 0) {
+      w2ui.main_layout_main_tabs.click(Object.keys(g.tab_cache)[0]); // select existing tab
+    }
   },
 
   sidebar_open_document = function(ev) {
     if (ev.target && ev.target.startsWith("document_")) {
       open_document(ev.target.substr(9));
     }
+  },
+
+  find_tab = function(target_id) {
+    var existing = $.grep(w2ui.main_layout_main_tabs.tabs, function(el, i) {
+      return el.id == target_id;
+    });
+    if (existing.length == 1) {
+      return existing[0];
+    }
+    return null;
   },
 
   open_document = function(document_id) {
@@ -140,10 +178,8 @@ var
     }
     else {
       var target_id = 'tab_' + document_id,
-        existing = $.grep(w2ui.main_layout_main_tabs.tabs, function(el, i) {
-          return el.id == target_id;
-        });
-      if (existing.length == 0) {
+        existing = find_tab(target_id); 
+      if (existing == null) {
         w2ui.main_layout_main_tabs.add({ id: target_id, text: escape_html(doc.document.name), closable: true });
         // load content for this document
         $.ajax({ 
@@ -194,7 +230,8 @@ var
       case "menu_document": return true;
       case "menu_document:edit_document": return edit_document();
       case "menu_document:preview_document": return preview_document();
-      case "menu_document:save_document": return save_document();
+      case "menu_document:save_document": return save_current_document();
+      case "menu_document:save_all": return save_all();
       case "menu_about": location.href = "/about"; return true;
       case "menu_user": return true;
       case "menu_user:logout": return logout();
@@ -219,6 +256,7 @@ var
     submenu.items = remove_by_id(submenu.items, "close_project");
     submenu.items = remove_by_id(submenu.items, "delete_project");
     w2ui.main_toolbar.remove('menu_add');
+    w2ui.main_toolbar.remove('menu_document');
     w2ui.main_toolbar.refresh();
     w2ui.main_sidebar.menu = [];
     get_projects();
@@ -358,8 +396,16 @@ var
       {id: 'sidebar_open_item', text: 'Open item', icon: 'fas fa-folder-open'},
       {id: 'sidebar_delete_item', text: 'Delete item', icon: 'fas fa-times'}
     ]
+    w2ui.main_toolbar.insert('menu_last', { type: 'menu', id: 'menu_document', caption: 'Document', img: 'icon-page', items: [
+      { text: 'Edit', id: 'edit_document' },
+      { text: 'Preview', id: 'preview_document' },
+      { text: 'Save', id: 'save_document' },
+      { text: 'Save All', id: 'save_all' }
+    ]});
+ 
     g.project_id = id;
     g.project_name = name;
+    g.unsaved_count = 0;
     setTimeout(load_project, 10);
   },
 
@@ -466,7 +512,66 @@ var
     }
   },
 
-  save_document = function() {
+  run_queue = function() {
+    if (g.queue.length > 0) {
+      var job = g.queue.pop();
+      job();
+      g.queue_count += 1;
+    }
+    else {
+      g.queue_completed();
+    }
+  },
+
+  save_all = function() {
+    var ok = true;
+    if (g.queue.length > 0) {
+      w2confirm({ msg: 'Cancel running job? Results can be unpredictable.' })
+        .yes( function () { ok = true; } )
+        .no( function () { ok = false; });
+    }
+    if (ok) {
+      g.queue = []
+      for (tab in g.tab_cache) { // tab == 'tab_xxx'
+        if (g.tab_cache[tab].unsaved == true) {
+          if ('tab_' + g.document_target == tab) { // is current document
+            g.queue.push(function () { save_current_document(run_queue) });
+          }
+          else { // is not current document
+            g.queue.push(function () { save_document(tab.substr(4), run_queue) });
+          }
+        }
+      }
+      g.queue_count = 0;
+      g.queue_completed = function() {
+        set_status(g.queue_count + ' document(s) saved.');
+      }
+      run_queue();
+    }
+  },
+
+  saved_all = function() {
+    set_status(g.saved + ' document(s) saved.');
+  },
+
+  save_document = function(document_target, callback) {
+    $.ajax({
+      type: "POST",
+      url: '/set/document_s', 
+      data: {
+        id: g.documents[document_target].document.id,
+        content: g.tab_cache['tab_' + document_target].content,
+        project_id: g.project_id
+      }})
+      .done(saved_document(document_target, callback))
+      .fail(show_error);
+  },
+
+  save_current_document = function(callback) {
+    if (g.document_target == undefined) {
+      return;
+    }
+
     $.ajax({
       type: "POST",
       url: '/set/document_s', 
@@ -475,12 +580,25 @@ var
         content: $('#editable_content').val(),
         project_id: g.project_id
       }})
-      .done(saved_document)
+      .done(saved_document(g.document_target, callback))
       .fail(show_error);
   },
 
-  saved_document = function(data) {
-    set_status('Saved.');
+  saved_document = function(document_target, callback) {
+    return function(data) {
+      set_status('Saved.');
+      var current = g.tab_cache['tab_' + document_target];
+      if (current.unsaved == true) {
+        current.unsaved = false;
+        g.unsaved_count -= 1;
+        set_status(g.unsaved_count + ' unsaved document(s)');
+        w2ui.main_layout_main_tabs.get('tab_' + document_target).text = escape_html(current.name);
+        w2ui.main_layout_main_tabs.refresh();
+      }
+      if (callback != undefined) {
+        callback();
+      }
+    }
   },
 
   add_document = function() {
