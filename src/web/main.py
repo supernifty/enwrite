@@ -141,11 +141,11 @@ def render():
 
     content = flask.request.form['content']
     
-    # convert latex to html TODO doesn't remove files, etc
+    # convert latex to html TODO doesn't remove files, hardcoded path, etc
     try:
         user_id = authenticator.user_id(flask.session)
         open('fragment-{user_id}.tex'.format(user_id=user_id), 'w').write(content)
-        return_code = os.system('pandoc -o fragment-{user_id}.html fragment-{user_id}.tex --verbose 1>fragment-{user_id}.log 2>fragment-{user_id}.err'.format(user_id=user_id))
+        return_code = os.system('/usr/bin/pandoc -o fragment-{user_id}.html fragment-{user_id}.tex --verbose 1>fragment-{user_id}.log 2>fragment-{user_id}.err'.format(user_id=user_id))
         if return_code == 0:
           result = open('fragment-{user_id}.html'.format(user_id=user_id), 'r').read()
         else:

@@ -1,4 +1,6 @@
 
+import datetime
+
 import model
 
 class QueryException(Exception):

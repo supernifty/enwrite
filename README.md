@@ -15,6 +15,11 @@ If you wish to use a database such as Postgres:
 pip install -U psycopg2
 ```
 
+If you wish to use the Latex renderer, install Pandoc using your OS installer, for example:
+```
+sudo apt install pandoc
+```
+
 # Running
 ```
 python3 main.py
