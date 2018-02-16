@@ -6,6 +6,7 @@
 import datetime
 import flask
 import json
+import os
 
 import sqlalchemy
 import flask_sqlalchemy
@@ -123,11 +124,36 @@ def set_data(category):
             query.update_document(db(), authenticator.user_id(flask.session), project_id, document_id, content)
             return flask.jsonify(status="success")
 
+        if category == 'document_u': # update document
+            req = json.loads(flask.request.form['request'])
+            query.update_document_properties(db(), authenticator.user_id(flask.session), req['record']['project_id'], req['record']['document_id'], req['record']['name'], req['record']['renderer'])
+            return flask.jsonify(status="success")
+
     except query.QueryException as ex:
         return flask.jsonify(status="error", message=ex.message)
 
     return flask.jsonify(status="error", message="Unrecognized command {}".format(category))
 
+@app.route("/render/latex", methods=['POST'])
+def render():
+    if not authenticator.is_auth(flask.session):
+        return None # shouldn't happen
+
+    content = flask.request.form['content']
+    
+    # convert latex to html TODO doesn't remove files, etc
+    try:
+        user_id = authenticator.user_id(flask.session)
+        open('fragment-{user_id}.tex'.format(user_id=user_id), 'w').write(content)
+        return_code = os.system('pandoc -o fragment-{user_id}.html fragment-{user_id}.tex --verbose 1>fragment-{user_id}.log 2>fragment-{user_id}.err'.format(user_id=user_id))
+        if return_code == 0:
+          result = open('fragment-{user_id}.html'.format(user_id=user_id), 'r').read()
+        else:
+          result = open('fragment-{user_id}.err'.format(user_id=user_id), 'r').read().replace('\n', '<br/>')
+        return flask.jsonify(content=result)
+    except Exception as ex:
+        return flask.jsonify(status="error", message=ex)
+ 
 ### authentication logic ###
 @app.route('/login')
 def login():

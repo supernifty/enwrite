@@ -46,10 +46,11 @@ class Document(Base):
 
   id = sqlalchemy.Column(sqlalchemy.String, primary_key=True, default=generate_id)
   created = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.utcnow, nullable=False)
+  updated = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.utcnow, nullable=False)
 
   name = sqlalchemy.Column(sqlalchemy.String(250), nullable=False)
   document_type = sqlalchemy.Column(sqlalchemy.String(8), nullable=False) # folder, document
-  renderer = sqlalchemy.Column(sqlalchemy.String(8), nullable=False, default='markdown') # latex, markdown
+  renderer = sqlalchemy.Column(sqlalchemy.String(8), nullable=False, default='Markdown') # latex, markdown
   content = sqlalchemy.Column(sqlalchemy.Text, nullable=False, default='')
 
   # project for this document
@@ -68,7 +69,7 @@ class Document(Base):
     '''
       summary document info
     '''
-    return {'id': self.id, 'name': self.name, 'document_type': self.document_type} #, 'content': self.content}
+    return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'renderer': self.renderer} #, 'content': self.content}
 
   def serializable(self):
     '''

@@ -29,3 +29,10 @@ We hope to add the following:
 * Checkpointing, restore
 * Attachments, notes
 * Indexing, searching
+
+# Dependencies
+* jquery
+* purecss
+* w2ui
+* flask
+* postgres

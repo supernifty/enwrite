@@ -116,7 +116,11 @@ def add_document(db, user_id, project_id, document_type, name, parent_id, predec
   if project is None:
     raise QueryException("Invalid project")
 
+  # initially use project renderer
+  renderer = project.renderer
+
   if parent_id == -1:
+    # add to root
     parent_id = None
   else:
     parent = db.query(model.Document).filter((model.Document.id == parent_id) & (model.Document.project == project)).first()
@@ -126,6 +130,9 @@ def add_document(db, user_id, project_id, document_type, name, parent_id, predec
     # new document can't be a child of another document
     if parent.document_type == 'document':
       parent_id = parent.parent_id # point to its parent
+
+    # if a parent, use its renderer
+    renderer = parent.renderer
 
   if predecessor_id == -1: # no predecessor (should be first)
     predecessor_id = None
@@ -137,7 +144,8 @@ def add_document(db, user_id, project_id, document_type, name, parent_id, predec
     if predecessor is None:
       raise QueryException("Invalid predecessor")
 
-  document = model.Document(project=project, name=name, parent_id=parent_id, predecessor_id=predecessor_id, document_type=document_type)
+  # create the new document
+  document = model.Document(project=project, name=name, parent_id=parent_id, predecessor_id=predecessor_id, document_type=document_type, renderer=renderer)
   db.add(document)
   if first is not None:
     db.flush() # get document id
@@ -153,6 +161,20 @@ def update_document(db, user_id, project_id, document_id, content):
     raise QueryException("Invalid project")
   document = db.query(model.Document).filter((model.Document.id == document_id) & (model.Document.project_id == project_id)).first()
   document.content = content
+  document.updated = datetime.datetime.utcnow()
+  db.commit()
+
+def update_document_properties(db, user_id, project_id, document_id, name, renderer):
+  user = db.query(model.User).filter(model.User.id == user_id).first()
+  if user is None:
+    raise QueryException("Authentication failed")
+  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
+  if project is None:
+    raise QueryException("Invalid project")
+  document = db.query(model.Document).filter((model.Document.id == document_id) & (model.Document.project_id == project_id)).first()
+  document.name = name
+  document.renderer = renderer
+  # TODO if folder, update all sub-items with new renderer
   db.commit()
 
 ###

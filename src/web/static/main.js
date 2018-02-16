@@ -128,10 +128,29 @@ var
   },
 
   preview_document = function() {
-    $('#preview_content').html(marked(escape_html($('#editable_content').val())));
-    MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
+    var current = g.documents[g.document_target];
+    if (current.document.renderer == 'Latex') {
+      $('#preview_content').html('Rendering Latex...');
+      $.ajax({
+        type: "POST",
+        url: '/render/latex', 
+        data: {
+          id: g.project_id,
+          content: $('#editable_content').val()
+        }
+        }).done(rendered)
+          .fail(show_error);
+    }
+    else {
+      $('#preview_content').html(marked(escape_html($('#editable_content').val())));
+      MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
+    }
     $('#editable_content').hide();
     $('#preview_content').show();
+  },
+
+  rendered = function(data) {
+    $('#preview_content').html(data.content);
   },
 
   close_tab = function(ev) {
@@ -172,14 +191,14 @@ var
   },
 
   open_document = function(document_id) {
-    var doc = g.documents[document_id];
-    if (doc.document.document_type == 'folder') {
-      console.log('TODO open folder');
-    }
-    else {
-      var target_id = 'tab_' + document_id,
-        existing = find_tab(target_id); 
-      if (existing == null) {
+    var doc = g.documents[document_id],
+        target_id = 'tab_' + document_id,
+        existing = find_tab(target_id);
+    if (existing == null) {
+      if (doc.document.document_type == 'folder') {
+        console.log('TODO open folder');
+      }
+      else {
         w2ui.main_layout_main_tabs.add({ id: target_id, text: escape_html(doc.document.name), closable: true });
         // load content for this document
         $.ajax({ 
@@ -188,9 +207,9 @@ var
         .done(show_document(target_id))
         .fail(show_error);
       }
-      else {
-        w2ui.main_layout_main_tabs.click(target_id); // select existing tab
-      }
+    }
+    else {
+      w2ui.main_layout_main_tabs.click(target_id); // select existing tab
     }
   },
 
@@ -213,6 +232,7 @@ var
       switch (ev.menuItem.id) {
         case "sidebar_open_item": return open_document(document_id);
         case "sidebar_delete_item": return delete_document(document_id);
+        case "sidebar_edit_item": return edit_document_properties(document_id);
       }
       w2alert('Unexpected command: ' + ev.menuItem.id);
     }
@@ -265,6 +285,24 @@ var
   /* project */
 
   close_project = function() {
+    // anything unsaved?
+    if (g.unsaved_count > 0) {
+      if (!confirm(g.unsaved_count + ' unsaved document(s). Are you sure?')) {
+        return;
+      }
+    }
+    // close all the tabs
+    var nd = []; 
+    for (var i in w2ui.main_layout_main_tabs.tabs) nd.push(w2ui.main_layout_main_tabs.tabs[i].id);
+    w2ui.main_layout_main_tabs.remove.apply(w2ui.main_layout_main_tabs, nd);
+
+    g.unsaved_count = 0;
+    g.document_target = null;
+    g.tab_cache = {};
+    $("#editable_content").off('change keyup paste mouseup', content_changed);
+    w2ui.main_layout.content('main', '<textarea id="editable_content"></textarea><div id="preview_content" style="display: none"></div>')
+
+    // remove menu items
     update_project_menu();
     set_status('Closed project "' + g.project_name + '"', true);
   },
@@ -394,7 +432,8 @@ var
     // enable sidebar context menu
     w2ui.main_sidebar.menu = [
       {id: 'sidebar_open_item', text: 'Open item', icon: 'fas fa-folder-open'},
-      {id: 'sidebar_delete_item', text: 'Delete item', icon: 'fas fa-times'}
+      {id: 'sidebar_delete_item', text: 'Delete item', icon: 'fas fa-times'},
+      {id: 'sidebar_edit_item', text: 'Properties', icon: 'fas fa-edit'}
     ]
     w2ui.main_toolbar.insert('menu_last', { type: 'menu', id: 'menu_document', caption: 'Document', img: 'icon-page', items: [
       { text: 'Edit', id: 'edit_document' },
@@ -601,6 +640,81 @@ var
     }
   },
 
+  edit_document_properties = function(document_id) {
+      if (w2ui.edit_document_properties) {
+        $().w2destroy('edit_document_properties');
+      }
+      var current = g.documents[document_id];
+      console.log(current.document.renderer);
+      $().w2form({
+          name: 'edit_document_properties',
+          style: 'border: 0px; background-color: transparent;',
+          url: '/set/document_u',
+          formHTML: 
+              '<div class="w2ui-page page-0">'+
+              '    <div class="w2ui-field">'+
+              '        <label>Title:</label>'+
+              '        <div>'+
+              '           <input name="name" type="text" maxlength="100" style="width: 250px"/>'+
+              '        </div>'+
+              '    </div>'+
+              '    <div class="w2ui-field">'+
+              '        <label>Renderer:</label>'+
+              '        <div>'+
+              '            <select name="renderer"/>'+
+              '        </div>'+
+              '    </div>'+
+              '</div>'+
+              '<div class="w2ui-buttons">'+
+              '    <button class="w2ui-btn" name="reset">Reset</button>'+
+              '    <button class="w2ui-btn" name="ok">OK</button>'+
+              '</div>',
+          fields: [
+              { field: 'name', type: 'text', required: true },
+              { field: 'renderer', type: 'select', required: true, options: { items: ['Markdown', 'Latex'] } }
+          ],
+          record: { 
+              name    : current.document.name,
+              document_type: current.document.document_type,
+              renderer: current.document.renderer,
+              project_id: g.project_id,
+              document_id: current.document.id
+          },
+          actions: {
+              "ok": function () { 
+                this.save(function (data) {
+                  if (data.status == 'success') {
+                      get_documents();
+                      $().w2popup('close');
+                  }
+                }) 
+              },
+              "reset": function () { this.clear(); }
+          }
+      });
+      $().w2popup('open', {
+        title   : 'Edit document properties',
+        body    : '<div id="form" style="width: 100%; height: 100%;"></div>',
+        style   : 'padding: 15px 0px 0px 0px',
+        width   : 500,
+        height  : 300, 
+        showMax : true,
+        onToggle: function (event) {
+            $(w2ui.edit_document_properties.box).hide();
+            event.onComplete = function () {
+                $(w2ui.edit_document_properties.box).show();
+                w2ui.edit_document_properties.resize();
+            }
+        },
+        onOpen: function (event) {
+            event.onComplete = function () {
+                // specifying an onOpen handler instead is equivalent to specifying an onBeforeOpen handler, which would make this code execute too early and hence not deliver.
+                $('#w2ui-popup #form').w2render('edit_document_properties');
+            }
+        }
+      });
+  },
+
   add_document = function() {
       if (!w2ui.add_document) {
         $().w2form({
@@ -731,49 +845,4 @@ var
     return String(string).replace(/[&<>"'`=\/]/g, function (s) {
       return ENTITY_MAP[s];
     });
-  },
-
-  init_about = function() {
-    var main_layout = $('#main_layout').w2layout({
-        name: 'main_layout',
-        panels: [
-            { type: 'top', size: 45, style: 'border: 0px; border-bottom: 1px solid silver; background-color: #000; color: #fff;', overflow: 'hidden'},
-            { type: 'main', style: 'background-color: white;' }
-        ]
-    });
-    w2ui.main_layout.content('top', $().w2toolbar({
-        name: 'main_toolbar',
-        items: [
-            { type: 'html',  id: 'menu_root',
-                html: function (item) {
-                    return '<div class="banner"><a href="/">NiftyWrite</a></div>'
-                }
-            },
-            { type: 'spacer' },
-            { type: 'button', id: 'menu_login', text: 'Login', icon: 'fa-star' }
-        ],
-        onClick: function (ev) {
-          if (ev.target == 'menu_login') {
-            location.href = '/';
-          }
-        }
-    }));
-
-    w2ui.main_layout.content('main', '<div style="color: #000" class="container">' +
-      '<div class="row">' +
-      '  <h2>Nifty Write</h2>' +
-      '  NiftyWrite is a tool for managing substantial writing projects, such as your book, thesis, or other magnus opus. ' +
-      '</div>' +
-      '<div class="row">' +
-        '<h2>Features</h2>' +
-        '<ul><li>Markdown formatting</li></ul>' +
-      '</div>' +
-      '<div class="row">' +
-        '<h2>Status</h2>' +
-      '</div>' +
-      '<div class="row">' +
-        '<h2>Pricing</h2>' +
-      '</div>' +
-      '</div>');
-  }
-
+  };
