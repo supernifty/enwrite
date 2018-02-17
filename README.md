@@ -20,6 +20,11 @@ If you wish to use the Latex renderer, install Pandoc using your OS installer, f
 sudo apt install pandoc
 ```
 
+Create the following helper directories:
+```
+mkdir tmp
+```
+
 # Running
 ```
 python3 main.py

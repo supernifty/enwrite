@@ -141,18 +141,20 @@ def render():
 
     content = flask.request.form['content']
     
-    # convert latex to html TODO doesn't remove files, hardcoded path, etc
+    # convert latex to html TODO queue?
     try:
         user_id = authenticator.user_id(flask.session)
-        open('fragment-{user_id}.tex'.format(user_id=user_id), 'w').write(content)
-        return_code = os.system('/usr/bin/pandoc -o fragment-{user_id}.html fragment-{user_id}.tex --verbose 1>fragment-{user_id}.log 2>fragment-{user_id}.err'.format(user_id=user_id))
+        open('{tmp}/fragment-{user_id}.tex'.format(tmp=config.TMP, user_id=user_id), 'w').write(content)
+        return_code = os.system('{pandoc} -o {tmp}/fragment-{user_id}.html {tmp}/fragment-{user_id}.tex --verbose 1>{tmp}/fragment-{user_id}.log 2>{tmp}/fragment-{user_id}.err'.format(user_id=user_id, tmp=config.TMP, pandoc=config.PANDOC))
         if return_code == 0:
-          result = open('fragment-{user_id}.html'.format(user_id=user_id), 'r').read()
+          result = open('{tmp}/fragment-{user_id}.html'.format(user_id=user_id, tmp=config.TMP), 'r').read()
         else:
-          result = open('fragment-{user_id}.err'.format(user_id=user_id), 'r').read().replace('\n', '<br/>')
+          result = open('{tmp}/fragment-{user_id}.err'.format(user_id=user_id, tmp=config.TMP), 'r').read().replace('\n', '<br/>')
         return flask.jsonify(content=result)
     except Exception as ex:
         return flask.jsonify(status="error", message=ex)
+    finally:
+        os.system('rm "{tmp}/fragment-{user_id}.*"'.format(user_id=user_id, tmp=config.TMP))
  
 ### authentication logic ###
 @app.route('/login')
