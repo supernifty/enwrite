@@ -154,7 +154,7 @@ def render():
     except Exception as ex:
         return flask.jsonify(status="error", message=ex)
     finally:
-        os.system('rm "{tmp}/fragment-{user_id}.*"'.format(user_id=user_id, tmp=config.TMP))
+        os.system('/bin/rm {tmp}/fragment-{user_id}.*'.format(user_id=user_id, tmp=config.TMP))
  
 ### authentication logic ###
 @app.route('/login')

@@ -343,7 +343,7 @@ var
                 '    <div class="w2ui-field">'+
                 '        <label>Project Name:</label>'+
                 '        <div>'+
-                '           <input name="name" type="text" maxlength="100" style="width: 250px"/>'+
+                '           <input name="name" type="text" maxlength="200" style="width: 250px"/>'+
                 '        </div>'+
                 '    </div>'+
                 '    <div class="w2ui-field">'+
@@ -468,7 +468,7 @@ var
                 '    <div class="w2ui-field">'+
                 '        <label>Title:</label>'+
                 '        <div>'+
-                '           <input name="name" type="text" maxlength="100" style="width: 250px"/>'+
+                '           <input name="name" type="text" maxlength="200" style="width: 250px"/>'+
                 '        </div>'+
                 '    </div>'+
                 '</div>'+
@@ -655,7 +655,7 @@ var
               '    <div class="w2ui-field">'+
               '        <label>Title:</label>'+
               '        <div>'+
-              '           <input name="name" type="text" maxlength="100" style="width: 250px"/>'+
+              '           <input name="name" type="text" maxlength="200" style="width: 250px"/>'+
               '        </div>'+
               '    </div>'+
               '    <div class="w2ui-field">'+
@@ -726,7 +726,7 @@ var
                 '    <div class="w2ui-field">'+
                 '        <label>Title:</label>'+
                 '        <div>'+
-                '           <input name="name" type="text" maxlength="100" style="width: 250px"/>'+
+                '           <input name="name" type="text" maxlength="200" style="width: 250px"/>'+
                 '        </div>'+
                 '    </div>'+
                 '</div>'+
