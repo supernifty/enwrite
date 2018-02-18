@@ -234,14 +234,14 @@ def move_document(db, user_id, project_id, document_id, target_document_id):
     if document_successor is not None:
       document_successor.predecessor = document_to_move.predecessor
 
-    # now move into document
-    document_to_move.parent = target_document # same parent
-    document_to_move.predecessor = None # first in list
-
     # find the first item in the folder and have it point to the document
     target_successor = db.query(model.Document).filter((model.Document.parent == target_document) & (model.Document.predecessor == None)).first()
     if target_successor is not None:
       target_successor.predecessor = document_to_move
+
+    # now move into document
+    document_to_move.parent = target_document # same parent
+    document_to_move.predecessor = None # first in list
 
   db.commit()
 
