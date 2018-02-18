@@ -236,7 +236,7 @@ def move_document(db, user_id, project_id, document_id, target_document_id):
 
     if document_successor is not None:
       document_successor.predecessor = document_to_move.predecessor
-      if first_child is not None and first_child.parent_id == document_to_move.parent_id:
+      if first_child is not None and first_child.id == document_to_move.id:
         first_child = document_successor
 
     # find the first item in the folder and have it point to the document
