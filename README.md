@@ -46,3 +46,4 @@ We hope to add the following:
 * w2ui
 * flask
 * postgres
+* dragula

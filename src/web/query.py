@@ -179,6 +179,72 @@ def update_document_properties(db, user_id, project_id, document_id, name, rende
   # TODO if folder, update all sub-items with new renderer
   db.commit()
 
+def move_document(db, user_id, project_id, document_id, target_document_id):
+  user = db.query(model.User).filter(model.User.id == user_id).first()
+  if user is None:
+    raise QueryException("Authentication failed")
+
+  if document_id == target_document_id:
+    raise QueryException("Documents are the same")
+
+  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
+  if project is None:
+    raise QueryException("Invalid project")
+
+  document_to_move = db.query(model.Document).filter((model.Document.id == document_id) & (model.Document.project_id == project_id)).first()
+
+  if target_document_id == 'root':
+    # was anything pointing to the document? if so, it should now point to the document's predecessor
+    document_successor = db.query(model.Document).filter((model.Document.predecessor_id == document_id) & (model.Document.project_id == project_id)).first()
+    if document_successor is not None:
+      document_successor.predecessor = document_to_move.predecessor
+    
+    # is there a top level root document? if so, point it to the document
+    target_successor = db.query(model.Document).filter((model.Document.parent == None) & (model.Document.predecessor == None)).first()
+    if target_successor is not None:
+      target_successor.predecessor = document_to_move
+
+    document_to_move.parent = None
+    document_to_move.predecessor = None
+
+    db.commit()
+    return
+
+  target_document = db.query(model.Document).filter((model.Document.id == target_document_id) & (model.Document.project_id == project_id)).first()
+
+  if target_document.document_type == 'document': # target is document, add to folder below this document
+    document_to_move.parent = target_document.parent # same parent
+
+    # was anything pointing to the target? if so, it should now point to the document
+    target_successor = db.query(model.Document).filter((model.Document.predecessor_id == target_document_id) & (model.Document.project_id == project_id)).first()
+    if target_successor is not None:
+      target_successor.predecessor = document_to_move
+
+    # was anything pointing to the document? if so, it should now point to the document's predecessor
+    document_successor = db.query(model.Document).filter((model.Document.predecessor_id == document_id) & (model.Document.project_id == project_id)).first()
+    if document_successor is not None:
+      document_successor.predecessor = document_to_move.predecessor
+
+    # now the document can point to the target
+    document_to_move.predecessor = target_document
+
+  else: # target is folder, place in folder (TODO option to place after folder)
+    # was anything pointing to the document? if so, it should now point to the document's predecessor
+    document_successor = db.query(model.Document).filter((model.Document.predecessor_id == document_id) & (model.Document.project_id == project_id)).first()
+    if document_successor is not None:
+      document_successor.predecessor = document_to_move.predecessor
+
+    # now move into document
+    document_to_move.parent = target_document # same parent
+    document_to_move.predecessor = None # first in list
+
+    # find the first item in the folder and have it point to the document
+    target_successor = db.query(model.Document).filter((model.Document.parent == target_document) & (model.Document.predecessor == None)).first()
+    if target_successor is not None:
+      target_successor.predecessor = document_to_move
+
+  db.commit()
+
 ###
 def delete_project(db, user_id, project_id):
   user = db.query(model.User).filter(model.User.id == user_id).first()
@@ -208,5 +274,3 @@ def delete_document(db, user_id, project_id, document_id):
   db.delete(document)
   db.commit()
 
-def move_document(db, user_id, project_id, document_id, parent_id, predecessor_id):
-  pass

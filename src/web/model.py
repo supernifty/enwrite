@@ -59,11 +59,11 @@ class Document(Base):
 
   # parent
   parent_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey("document.id"), nullable=True)
-  children = sqlalchemy.orm.relationship("Document", foreign_keys=[parent_id], backref=sqlalchemy.orm.backref('parent', remote_side=[id]))
+  children = sqlalchemy.orm.relationship("Document", foreign_keys=[parent_id], post_update=True, backref=sqlalchemy.orm.backref('parent', remote_side=[id]))
 
   # predecessor (previous sibling)
   predecessor_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey("document.id"), nullable=True)
-  successors = sqlalchemy.orm.relationship("Document", foreign_keys=[predecessor_id], backref=sqlalchemy.orm.backref('predecessor', remote_side=[id]))
+  successors = sqlalchemy.orm.relationship("Document", foreign_keys=[predecessor_id], post_update=True, backref=sqlalchemy.orm.backref('predecessor', remote_side=[id]))
 
   def __json__(self):
     '''

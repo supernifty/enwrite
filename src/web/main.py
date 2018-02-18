@@ -129,6 +129,13 @@ def set_data(category):
             query.update_document_properties(db(), authenticator.user_id(flask.session), req['record']['project_id'], req['record']['document_id'], req['record']['name'], req['record']['renderer'])
             return flask.jsonify(status="success")
 
+        if category == 'document_m': # move document
+            document_id = flask.request.form['id']
+            project_id = flask.request.form['project_id']
+            target_id = flask.request.form['target_id']
+            query.move_document(db(), authenticator.user_id(flask.session), project_id, document_id, target_id)
+            return flask.jsonify(status="success")
+
     except query.QueryException as ex:
         return flask.jsonify(status="error", message=ex.message)
 

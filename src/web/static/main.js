@@ -3,7 +3,8 @@ var
     'sidebar_target': null,
     'document_target': null,
     'tab_cache': {},
-    'queue': []
+    'queue': [],
+    'previewing_document': false
   },
 
   ENTITY_MAP = {
@@ -84,30 +85,38 @@ var
         }
       },
       onMenuClick: sidebar_menu_handler,
-      onDblClick: sidebar_open_document
+      onDblClick: sidebar_open_document,
+      onRefresh: sidebar_refresh
     })
     );
 
     get_projects();
+
+    // drag and drop documents
   },
 
   select_tab = function(ev) {
-    $("#editable_content").off('change keyup paste mouseup', content_changed);
-
-    // save changes to old tab
-    var current;
-    if (g.document_target != null) {
-      current = g.tab_cache['tab_' + g.document_target];
-      current.content = $('#editable_content').val();
-    }
-
     // update html
-    g.document_target = ev.target.substr(4); // set selected document (tab_)
-    w2ui.main_layout.content('main', '<textarea id="editable_content"></textarea><div id="preview_content" style="display: none"></div>')
-    current = g.tab_cache['tab_' + g.document_target];
-    $('#editable_content').val(current.content);
-    $('#editable_content').on('change keyup paste mouseup', content_changed);
-    preview_document();
+    if (g.document_target != ev.target.substr(4)) {  // set selected document (tab_)
+      $("#editable_content").off('change keyup paste mouseup', content_changed);
+
+      // save changes to old tab
+      var current;
+      if (g.document_target != null) {
+        current = g.tab_cache['tab_' + g.document_target];
+        current.content = $('#editable_content').val();
+      }
+
+      g.document_target = ev.target.substr(4);
+      w2ui.main_layout.content('main', '<textarea id="editable_content"></textarea><div id="preview_content" style="display: none"></div>')
+      current = g.tab_cache['tab_' + g.document_target];
+      $('#editable_content').val(current.content);
+      $('#editable_content').on('change keyup paste mouseup', content_changed);
+      preview_document();
+    }
+    else {
+      toggle_document_view();
+    }
   },
 
   content_changed = function(ev) {
@@ -122,9 +131,19 @@ var
     }
   },
 
+  toggle_document_view = function() {
+    if (g.previewing_document) {
+      edit_document();
+    }
+    else {
+      preview_document();
+    }
+  },
+
   edit_document = function() {
     $('#editable_content').show();
     $('#preview_content').hide();
+    g.previewing_document = false;
   },
 
   preview_document = function() {
@@ -147,6 +166,7 @@ var
     }
     $('#editable_content').hide();
     $('#preview_content').show();
+    g.previewing_document = true;
   },
 
   rendered = function(data) {
@@ -172,6 +192,18 @@ var
     if (Object.keys(g.tab_cache).length > 0) {
       w2ui.main_layout_main_tabs.click(Object.keys(g.tab_cache)[0]); // select existing tab
     }
+  },
+
+  sidebar_refresh = function(ev) {
+    // make draggable
+    ev.onComplete = function() {
+        $('.w2ui-node,#layout_main_layout_panel_left')
+          .attr('draggable', 'true')
+          .attr('ondragstart', 'dragstart(event)')
+          .attr('ondragend', 'dragend(event)')
+          .attr('ondragover', 'dragover(event)')
+          .attr('ondrop', 'drop(event)');
+    };
   },
 
   sidebar_open_document = function(ev) {
@@ -645,7 +677,6 @@ var
         $().w2destroy('edit_document_properties');
       }
       var current = g.documents[document_id];
-      console.log(current.document.renderer);
       $().w2form({
           name: 'edit_document_properties',
           style: 'border: 0px; background-color: transparent;',
@@ -801,11 +832,11 @@ var
   },
 
   make_tree = function(documents) {
-    var result = [];
+    var result = [], document_id;
     for (idx in documents) {
-      g.documents.push(documents[idx]);
+      g.documents[documents[idx].document.id] = documents[idx];
       result.push({
-        id: 'document_' + (g.documents.length - 1), 
+        id: 'document_' + documents[idx].document.id, 
         text: escape_html(documents[idx].document.name), 
         img: document_image(documents[idx].document),
         nodes: make_tree(documents[idx].children)
@@ -822,6 +853,61 @@ var
       w2ui.main_sidebar.add({id: 'placeholder', text: 'No documents.'});
     }
     w2ui.main_sidebar.refresh();
+  },
+
+  dragstart = function(ev) {
+    ev.dataTransfer.setData("text/plain", ev.target.id);
+    ev.dataTransfer.dropEffect = "move";
+  },
+
+  dragend = function(ev) {
+  },
+
+  dragover = function(ev) {
+    ev.preventDefault();
+    ev.dataTransfer.dropEffect = "move"
+  },
+
+  drop = function(ev) {
+    ev.preventDefault();
+    var data = ev.dataTransfer.getData("text");
+    if (ev.target.id.startsWith('node_document_')) {
+      $.ajax({
+        type: "POST",
+        url: '/set/document_m', 
+        data: {
+          id: data.substring(14), // node_document_
+          project_id: g.project_id,
+          target_id: ev.target.id.substring(14)
+        }
+        }).done(dropped)
+         .fail(show_error);
+    }
+    else if (ev.target.className == 'w2ui-sidebar-div') {
+      $.ajax({
+        type: "POST",
+        url: '/set/document_m', 
+        data: {
+          id: data.substring(14), // node_document_
+          project_id: g.project_id,
+          target_id: "root"
+        }
+        }).done(dropped)
+         .fail(show_error);
+     }
+    else {
+      set_status('Cannot move document here.');
+    }
+  }, 
+
+  dropped = function(data) {
+    if (data.status == 'success') {
+      get_documents();
+      set_status('Document moved.');
+    }
+    else {
+      show_error(data.message);
+    }
   },
 
   remove_sidebar_nodes = function() {
