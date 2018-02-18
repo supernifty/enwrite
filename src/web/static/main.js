@@ -872,6 +872,7 @@ var
     ev.preventDefault();
     var data = ev.dataTransfer.getData("text");
     if (ev.target.id.startsWith('node_document_')) {
+      // console.log('drop ' + data + ' on ' + ev.target.id);
       $.ajax({
         type: "POST",
         url: '/set/document_m', 
