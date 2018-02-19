@@ -108,7 +108,22 @@ def folder(db, user_id, project_id, document_id):
   return document
 
 def children(db, folder):
-  return db.query(model.Document).filter(model.Document.parent_id == folder.id)
+  predecessors = {}
+  root = None
+  for child in db.query(model.Document).filter(model.Document.parent_id == folder.id):
+    if child.predecessor_id is None:
+      root = child
+    else:
+      predecessors[child.predecessor_id] = child
+
+  if root is None: # no children
+    return []
+
+  result = [root]
+  while result[-1].id in predecessors:
+    result.append(predecessors[result[-1].id])
+
+  return result
 
 # setters
 def find_or_add_user(db, email):
