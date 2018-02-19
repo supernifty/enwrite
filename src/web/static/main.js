@@ -19,7 +19,7 @@ var
   },
 
   MAX_SUMMARY = 250,
-  MAX_TITLE = 60,
+  MAX_TITLE = 50,
 
   init = function() {
     // markdown renderer
