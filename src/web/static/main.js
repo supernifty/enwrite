@@ -18,8 +18,7 @@ var
     '=': '&#x3D;'
   },
 
-  MAX_SUMMARY = 250,
-  MAX_TITLE = 50,
+  MAX_SUMMARY = 1024,
 
   init = function() {
     // markdown renderer
@@ -109,10 +108,10 @@ var
         for (child in selected_document.children) {
           var item = selected_document.children[child];
           if (item.renderer == 'Latex') {
-            content += '<div class="pure-u-1-3"><div class="child_outer"><div class="child_header">' + escape_html(max_length(item.name, MAX_TITLE)) + '</div><div class="child_content">' + escape_html(max_length(item.content, MAX_SUMMARY)) + '</div></div></div>';
+            content += '<div class="pure-u-1-4"><div class="child_outer"><div class="child_header">' + escape_html(item.name) + '</div><div class="child_content">' + escape_html(max_length(item.content, MAX_SUMMARY)) + '</div></div></div>';
           }
           else {
-            content += '<div class="pure-u-1-3"><div class="child_outer"><div class="child_header">' + escape_html(max_length(item.name, MAX_TITLE)) + '</div><div class="child_content">' + marked(escape_html(max_length(item.content, MAX_SUMMARY))) + '</div></div></div>';
+            content += '<div class="pure-u-1-4"><div class="child_outer"><div class="child_header">' + escape_html(item.name) + '</div><div class="child_content">' + marked(escape_html(max_length(item.content, MAX_SUMMARY))) + '</div></div></div>';
           }
         }
         content += '</div>';
