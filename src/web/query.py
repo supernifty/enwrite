@@ -7,8 +7,12 @@ class QueryException(Exception):
   def __init__(self, message):
     self.message = message
 
-def json(objects):
-  return [o.__json__() for o in objects]
+def summary(objects):
+  return [o.summary() for o in objects]
+
+def detail(objects):
+  return [o.detail() for o in objects]
+
 
 # getters
 def projects(db, user_id):
@@ -68,9 +72,9 @@ def make_tree(root, documents):
         break
 
     if first is None: # no first found = no children
-      result.append({'document': current['document'].__json__(), 'children': []})
+      result.append({'document': current['document'].summary(), 'children': []})
     else: # make child tree
-      result.append({'document': current['document'].__json__(), 'children': make_tree(first, documents)})
+      result.append({'document': current['document'].summary(), 'children': make_tree(first, documents)})
 
     # iterate over siblings
     if current['next'] is None:
@@ -89,6 +93,22 @@ def document(db, user_id, project_id, document_id):
   if document is None:
     raise QueryException("Invalid document")
   return document
+
+def folder(db, user_id, project_id, document_id):
+  user = db.query(model.User).filter(model.User.id == user_id).first()
+  if user is None:
+    raise QueryException("Authentication error")
+  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
+  if project is None:
+    raise QueryException("Invalid project")
+  document = db.query(model.Document).filter((model.Document.id == document_id) & (model.Document.project_id == project_id)).first()
+  if document is None:
+    raise QueryException("Invalid document")
+
+  return document
+
+def children(db, folder):
+  return db.query(model.Document).filter(model.Document.parent_id == folder.id)
 
 # setters
 def find_or_add_user(db, email):
@@ -212,8 +232,6 @@ def move_document(db, user_id, project_id, document_id, target_document_id):
 
   target_document = db.query(model.Document).filter((model.Document.id == target_document_id) & (model.Document.project_id == project_id)).first()
 
-  #if target_document.document_type == 'document': # target is document, add to folder below this document
-
   # was anything pointing to the target? if so, it should now point to the document
   target_successor = db.query(model.Document).filter((model.Document.predecessor_id == target_document_id) & (model.Document.project_id == project_id)).first()
   document_successor = db.query(model.Document).filter((model.Document.predecessor_id == document_id) & (model.Document.project_id == project_id)).first()
@@ -228,24 +246,6 @@ def move_document(db, user_id, project_id, document_id, target_document_id):
   # now the document can point to the target
   document_to_move.parent = target_document.parent # same parent
   document_to_move.predecessor = target_document
-
-#  else: # target is folder, place in folder (TODO option to place after folder)
-#    # was anything pointing to the document? if so, it should now point to the document's predecessor
-#    document_successor = db.query(model.Document).filter((model.Document.predecessor_id == document_id) & (model.Document.project_id == project_id)).first()
-#    first_child = db.query(model.Document).filter((model.Document.parent_id == target_document_id) & (model.Document.predecessor_id == None)).first()
-#
-#    if document_successor is not None:
-#      document_successor.predecessor = document_to_move.predecessor
-#      if first_child is not None and first_child.id == document_to_move.id:
-#        first_child = document_successor
-#
-#    # find the first item in the folder and have it point to the document
-#    if first_child is not None and first_child.id != document_to_move.id:
-#      first_child.predecessor = document_to_move
-#
-#    # now move into document
-#    document_to_move.parent = target_document # folder
-#    document_to_move.predecessor = None # first in list
 
   db.commit()
 

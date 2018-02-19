@@ -74,7 +74,7 @@ def get_data(category):
 
     try:
         if category == 'projects':
-           return flask.jsonify(username=authenticator.username(flask.session), projects=query.json(query.projects(db(), authenticator.user_id(flask.session)).all())) 
+           return flask.jsonify(username=authenticator.username(flask.session), projects=query.summary(query.projects(db(), authenticator.user_id(flask.session)).all())) 
         if category == 'documents':
            if flask.request.args.get('project_id') is None:
                raise query.QueryException("Required parameter project_id not provided")
@@ -84,7 +84,15 @@ def get_data(category):
                raise query.QueryException("Required parameter project_id not provided")
            if flask.request.args.get('document_id') is None:
                raise query.QueryException("Required parameter document_id not provided")
-           return flask.jsonify(username=authenticator.username(flask.session), document=query.document(db(), authenticator.user_id(flask.session), flask.request.args.get('project_id'), flask.request.args.get('document_id')).serializable())
+           return flask.jsonify(username=authenticator.username(flask.session), document=query.document(db(), authenticator.user_id(flask.session), flask.request.args.get('project_id'), flask.request.args.get('document_id')).detail())
+        if category == 'folder':
+           if flask.request.args.get('project_id') is None:
+               raise query.QueryException("Required parameter project_id not provided")
+           if flask.request.args.get('document_id') is None:
+               raise query.QueryException("Required parameter document_id not provided")
+           folder = query.folder(db(), authenticator.user_id(flask.session), flask.request.args.get('project_id'), flask.request.args.get('document_id'))
+           children = query.children(db(), folder)
+           return flask.jsonify(username=authenticator.username(flask.session), document=folder.summary(), children=query.detail(children))
     except query.QueryException as ex:
         return flask.jsonify(status="error", message="Request failed: {}".format(ex.message))
 

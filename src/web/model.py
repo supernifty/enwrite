@@ -37,7 +37,7 @@ class Project(Base):
   owner_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey("app_user.id"), nullable=False)
   owner = sqlalchemy.orm.relationship('User', backref=sqlalchemy.orm.backref('projects', lazy='dynamic'))
 
-  def __json__(self):
+  def summary(self):
     return {'id': self.id, 'name': self.name, 'renderer': self.renderer, 'created': self.created}
 
 # a tree of documents
@@ -65,13 +65,13 @@ class Document(Base):
   predecessor_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey("document.id"), nullable=True)
   successors = sqlalchemy.orm.relationship("Document", foreign_keys=[predecessor_id], post_update=True, backref=sqlalchemy.orm.backref('predecessor', remote_side=[id]))
 
-  def __json__(self):
+  def summary(self):
     '''
       summary document info
     '''
     return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'renderer': self.renderer} #, 'content': self.content}
 
-  def serializable(self):
+  def detail(self):
     '''
       full document info
     '''

@@ -66,3 +66,20 @@ ul {
   padding-left: 20px;
 }
 
+.child_outer {
+    margin: 2px;
+}
+
+.child_content {
+    padding: 2px;
+    background-color: #f1f1f1;
+    border: 1px solid #d3d3d3;
+}
+
+.child_header {
+    padding: 2px 3px 2px 3px;
+    cursor: move;
+    z-index: 10;
+    background-color: #323948;
+    color: #fff;
+}

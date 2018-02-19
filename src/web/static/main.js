@@ -18,6 +18,8 @@ var
     '=': '&#x3D;'
   },
 
+  MAX_SUMMARY = 250,
+
   init = function() {
     // markdown renderer
       var renderer = new marked.Renderer();
@@ -97,25 +99,46 @@ var
 
   select_tab = function(ev) {
     // update html
-    if (g.document_target != ev.target.substr(4)) {  // set selected document (tab_)
-      $("#editable_content").off('change keyup paste mouseup', content_changed);
-
-      // save changes to old tab
-      var current;
-      if (g.document_target != null) {
-        current = g.tab_cache['tab_' + g.document_target];
-        current.content = $('#editable_content').val();
+    var selected_document = g.tab_cache['tab_' + ev.target.substr(4)];
+    if (selected_document.document_type == 'folder') { 
+      if (g.document_target != ev.target.substr(4)) { // changed selection 
+        // render each child
+        g.document_target = ev.target.substr(4);
+        var content = '<div class="pure-g">';
+        for (child in selected_document.children) {
+          var item = selected_document.children[child];
+          if (item.renderer == 'Markdown') {
+            content += '<div class="pure-u-1-3"><div class="child_outer"><div class="child_header">' + escape_html(item.name) + '</div><div class="child_content">' + marked(escape_html(item.content.substr(0, MAX_SUMMARY))) + '</div></div></div>';
+          }
+          else {
+            content += '<div class="pure-u-1-3"><div class="child_outer"><div class="child_header">' + escape_html(item.name) + '</div><div class="child_content">' + escape_html(item.content.substr(0, MAX_SUMMARY)) + '</div></div></div>';
+          }
+        }
+        content += '</div>';
+        w2ui.main_layout.content('main', content);
       }
-
-      g.document_target = ev.target.substr(4);
-      w2ui.main_layout.content('main', '<textarea id="editable_content"></textarea><div id="preview_content" style="display: none"></div>')
-      current = g.tab_cache['tab_' + g.document_target];
-      $('#editable_content').val(current.content);
-      $('#editable_content').on('change keyup paste mouseup', content_changed);
-      preview_document();
     }
     else {
-      toggle_document_view();
+      if (g.document_target != ev.target.substr(4)) { // changed selection 
+        $("#editable_content").off('change keyup paste mouseup', content_changed);
+  
+        // save changes to old tab
+        var current;
+        if (g.document_target != null) {
+          current = g.tab_cache['tab_' + g.document_target];
+          current.content = $('#editable_content').val();
+        }
+  
+        g.document_target = ev.target.substr(4);
+        w2ui.main_layout.content('main', '<textarea id="editable_content"></textarea><div id="preview_content" style="display: none"></div>')
+        current = g.tab_cache['tab_' + g.document_target];
+        $('#editable_content').val(current.content);
+        $('#editable_content').on('change keyup paste mouseup', content_changed);
+        preview_document();
+      }
+      else {
+        toggle_document_view();
+      }
     }
   },
 
@@ -228,7 +251,13 @@ var
         existing = find_tab(target_id);
     if (existing == null) {
       if (doc.document.document_type == 'folder') {
-        console.log('TODO open folder');
+        w2ui.main_layout_main_tabs.add({ id: target_id, text: escape_html(doc.document.name), closable: true });
+        // load content for this document
+        $.ajax({ 
+          url: "/get/folder?document_id=" + doc.document.id + "&project_id=" + g.project_id
+        })
+        .done(show_folder(target_id))
+        .fail(show_error);
       }
       else {
         w2ui.main_layout_main_tabs.add({ id: target_id, text: escape_html(doc.document.name), closable: true });
@@ -242,6 +271,15 @@ var
     }
     else {
       w2ui.main_layout_main_tabs.click(target_id); // select existing tab
+    }
+  },
+
+  show_folder = function(target_id) {
+    return function(data) {
+      set_status('Opened folder containing ' + data.children.length + ' item(s).');
+      g.tab_cache[target_id] = data.document;
+      g.tab_cache[target_id].children = data.children;
+      w2ui.main_layout_main_tabs.click(target_id); // select tab to display content
     }
   },
 
@@ -872,7 +910,6 @@ var
     ev.preventDefault();
     var data = ev.dataTransfer.getData("text");
     if (ev.target.id.startsWith('node_document_')) {
-      // console.log('drop ' + data + ' on ' + ev.target.id);
       $.ajax({
         type: "POST",
         url: '/set/document_m', 
