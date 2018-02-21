@@ -107,15 +107,21 @@ var
         var content = '<div class="pure-g">';
         for (child in selected_document.children) {
           var item = selected_document.children[child];
-          if (item.renderer == 'Latex') {
-            content += '<div class="pure-u-1-4"><div class="child_outer"><div class="child_header">' + escape_html(item.name) + '</div><div class="child_content">' + escape_html(max_length(item.content, MAX_SUMMARY)) + '</div></div></div>';
+          if (item.document_type == 'document') {
+            if (item.renderer == 'Latex') {
+              content += '<div class="pure-u-1-4"><div class="child_outer" id="sub_' + item.id + '"><div class="child_header">' + escape_html(item.name) + '</div><div class="child_content_' + item.document_type + '">' + escape_html(max_length(item.content, MAX_SUMMARY)) + '</div></div></div>';
+            }
+            else {
+              content += '<div class="pure-u-1-4"><div class="child_outer" id="sub_' + item.id + '"><div class="child_header">' + escape_html(item.name) + '</div><div class="child_content_' + item.document_type + '">' + marked(escape_html(max_length(item.content, MAX_SUMMARY))) + '</div></div></div>';
+            }
           }
           else {
-            content += '<div class="pure-u-1-4"><div class="child_outer"><div class="child_header">' + escape_html(item.name) + '</div><div class="child_content">' + marked(escape_html(max_length(item.content, MAX_SUMMARY))) + '</div></div></div>';
+            content += '<div class="pure-u-1-4"><div class="child_outer" id="sub_' + item.id + '"><div class="child_header">' + escape_html(item.name) + '</div><div class="child_content_' + item.document_type + '">Folder</div></div></div>';
           }
         }
         content += '</div>';
         w2ui.main_layout.content('main', content);
+        $('.child_outer').on('click', sub_open_document);
       }
     }
     else {
@@ -232,6 +238,12 @@ var
   sidebar_open_document = function(ev) {
     if (ev.target && ev.target.startsWith("document_")) {
       open_document(ev.target.substr(9));
+    }
+  },
+
+  sub_open_document = function(ev) {
+    if (ev.currentTarget && ev.currentTarget.id.startsWith("sub_")) {
+      open_document(ev.currentTarget.id.substr(4));
     }
   },
 

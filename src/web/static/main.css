@@ -71,7 +71,15 @@ ul {
     overflow: hidden;
 }
 
-.child_content {
+.child_content_folder {
+    padding: 2px;
+    background-color: #fcf6e7;
+    border: 1px solid #d8a63B;
+    height: 250px;
+    color: #d8a63b;
+}
+
+.child_content_document {
     padding: 2px;
     background-color: #f1f1f1;
     border: 1px solid #d3d3d3;
