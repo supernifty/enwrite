@@ -159,17 +159,24 @@ def render():
     # convert latex to html TODO queue?
     try:
         user_id = authenticator.user_id(flask.session)
-        open('{tmp}/fragment-{user_id}.tex'.format(tmp=config.TMP, user_id=user_id), 'w').write(content)
-        return_code = os.system('{pandoc} -o {tmp}/fragment-{user_id}.html {tmp}/fragment-{user_id}.tex --verbose 1>{tmp}/fragment-{user_id}.log 2>{tmp}/fragment-{user_id}.err'.format(user_id=user_id, tmp=config.TMP, pandoc=config.PANDOC))
+        # ensure existence of user specific asset dir
+        root = os.path.abspath(os.path.join(config.ASSETS, user_id))
+        if not os.path.exists(root):
+            os.makedirs(root)
+        # write tex
+        open('{root}/fragment.tex'.format(root=root, user_id=user_id), 'w').write(content)
+        command = '{command} 1>"{root}/fragment.out" 2>"{root}/fragment.err"'.format(root=root, command=config.PANDOC.format(root=root, user_id=user_id))
+        print("executing", command)
+        return_code = os.system('{command} 1>"{root}/fragment.out" 2>"{root}/fragment.err"'.format(root=root, command=command))
         if return_code == 0:
-          result = open('{tmp}/fragment-{user_id}.html'.format(user_id=user_id, tmp=config.TMP), 'r').read()
+          result = open('{root}/fragment.html'.format(user_id=user_id, root=root), 'r').read()
         else:
-          result = open('{tmp}/fragment-{user_id}.err'.format(user_id=user_id, tmp=config.TMP), 'r').read().replace('\n', '<br/>')
+          result = open('{root}/fragment.err'.format(user_id=user_id, root=root), 'r').read().replace('\n', '<br/>')
         return flask.jsonify(content=result)
     except Exception as ex:
         return flask.jsonify(status="error", message=ex)
     finally:
-        os.system('/bin/rm {tmp}/fragment-{user_id}.*'.format(user_id=user_id, tmp=config.TMP))
+        os.system('/bin/rm {root}/fragment.*'.format(user_id=user_id, root=root))
  
 ### authentication logic ###
 @app.route('/login')
