@@ -6,6 +6,7 @@
 import datetime
 import flask
 import json
+import mimetypes
 import os
 
 import sqlalchemy
@@ -104,8 +105,9 @@ def get_data(category):
                raise query.QueryException("Required parameter id not provided")
            result = query.attachment(db(), authenticator.user_id(flask.session), flask.request.args.get('project_id'), flask.request.args.get('id'))
            response = flask.make_response(open(result['filename'], 'rb').read())
-           #response.headers['Content-Type'] = 'text/plain'
-           response.headers['Content-Disposition'] = 'attachment; filename={}'.format(result["name"]) # TODO encode name
+           content_type = mimetypes.MimeTypes().guess_type(result['name'])[0]
+           response.headers['Content-Type'] = content_type or 'application/octet-stream'
+           response.headers['Content-Disposition'] = 'inline; filename="{}"'.format(result["name"].replace('"', '')) # TODO encode name
            return response
 
     except query.QueryException as ex:
