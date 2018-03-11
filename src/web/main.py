@@ -75,16 +75,19 @@ def get_data(category):
     try:
         if category == 'projects':
            return flask.jsonify(username=authenticator.username(flask.session), projects=query.summary(query.projects(db(), authenticator.user_id(flask.session)).all())) 
+
         if category == 'documents':
            if flask.request.args.get('project_id') is None:
                raise query.QueryException("Required parameter project_id not provided")
            return flask.jsonify(username=authenticator.username(flask.session), documents=query.documents(db(), authenticator.user_id(flask.session), flask.request.args.get('project_id')))
+
         if category == 'document':
            if flask.request.args.get('project_id') is None:
                raise query.QueryException("Required parameter project_id not provided")
            if flask.request.args.get('document_id') is None:
                raise query.QueryException("Required parameter document_id not provided")
            return flask.jsonify(username=authenticator.username(flask.session), document=query.document(db(), authenticator.user_id(flask.session), flask.request.args.get('project_id'), flask.request.args.get('document_id')).detail())
+
         if category == 'folder':
            if flask.request.args.get('project_id') is None:
                raise query.QueryException("Required parameter project_id not provided")
@@ -93,6 +96,18 @@ def get_data(category):
            folder = query.folder(db(), authenticator.user_id(flask.session), flask.request.args.get('project_id'), flask.request.args.get('document_id'))
            children = query.children(db(), folder)
            return flask.jsonify(username=authenticator.username(flask.session), document=folder.summary(), children=query.detail(children))
+
+        if category == 'attachment':
+           if flask.request.args.get('project_id') is None:
+               raise query.QueryException("Required parameter project_id not provided")
+           if flask.request.args.get('id') is None:
+               raise query.QueryException("Required parameter id not provided")
+           result = query.attachment(db(), authenticator.user_id(flask.session), flask.request.args.get('project_id'), flask.request.args.get('id'))
+           response = flask.make_response(open(result['filename'], 'rb').read())
+           #response.headers['Content-Type'] = 'text/plain'
+           response.headers['Content-Disposition'] = 'attachment; filename={}'.format(result["name"]) # TODO encode name
+           return response
+
     except query.QueryException as ex:
         return flask.jsonify(status="error", message="Request failed: {}".format(ex.message))
 
@@ -144,6 +159,18 @@ def set_data(category):
             query.move_document(db(), authenticator.user_id(flask.session), project_id, document_id, target_id)
             return flask.jsonify(status="success")
 
+        if category == 'attachment': # add attachment
+            req = json.loads(flask.request.form['request'])
+            query.add_attachments(db(), authenticator.user_id(flask.session), req['record']['project_id'], req['record']['id'], req['record']['file'])
+            return flask.jsonify(status="success")
+
+        if category == 'attachment_d': # delete attachment
+            attachment_id = flask.request.form['id']
+            project_id = flask.request.form['project_id']
+            query.delete_attachment(db(), authenticator.user_id(flask.session), project_id, attachment_id)
+            return flask.jsonify(status="success")
+
+
     except query.QueryException as ex:
         return flask.jsonify(status="error", message=ex.message)
 
@@ -164,19 +191,18 @@ def render():
         if not os.path.exists(root):
             os.makedirs(root)
         # write tex
-        open('{root}/fragment.tex'.format(root=root, user_id=user_id), 'w').write(content)
-        command = '{command} 1>"{root}/fragment.out" 2>"{root}/fragment.err"'.format(root=root, command=config.PANDOC.format(root=root, user_id=user_id))
-        print("executing", command)
-        return_code = os.system('{command} 1>"{root}/fragment.out" 2>"{root}/fragment.err"'.format(root=root, command=command))
+        open('{root}/_fragment.tex'.format(root=root, user_id=user_id), 'w').write(content)
+        command = '{command} 1>"{root}/_fragment.out" 2>"{root}/_fragment.err"'.format(root=root, command=config.PANDOC.format(root=root, user_id=user_id))
+        return_code = os.system('{command} 1>"{root}/_fragment.out" 2>"{root}/_fragment.err"'.format(root=root, command=command))
         if return_code == 0:
-          result = open('{root}/fragment.html'.format(user_id=user_id, root=root), 'r').read()
+          result = open('{root}/_fragment.html'.format(user_id=user_id, root=root), 'r').read()
         else:
-          result = open('{root}/fragment.err'.format(user_id=user_id, root=root), 'r').read().replace('\n', '<br/>')
+          result = open('{root}/_fragment.err'.format(user_id=user_id, root=root), 'r').read().replace('\n', '<br/>')
         return flask.jsonify(content=result)
     except Exception as ex:
         return flask.jsonify(status="error", message=ex)
     finally:
-        os.system('/bin/rm {root}/fragment.*'.format(user_id=user_id, root=root))
+        os.system('/bin/rm {root}/_fragment.*'.format(user_id=user_id, root=root))
  
 ### authentication logic ###
 @app.route('/login')

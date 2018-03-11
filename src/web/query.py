@@ -1,6 +1,9 @@
 
+import base64
 import datetime
+import os
 
+import config
 import model
 
 class QueryException(Exception):
@@ -189,6 +192,73 @@ def add_document(db, user_id, project_id, document_type, name, parent_id, predec
     first.predecessor_id = document.id
   db.commit()
 
+def add_attachments(db, user_id, project_id, document_id, attachments):
+  user = db.query(model.User).filter(model.User.id == user_id).first()
+  if user is None:
+    raise QueryException("Authentication failed")
+
+  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
+  if project is None:
+    raise QueryException("Invalid project")
+
+  document = db.query(model.Document).filter((model.Document.id == document_id) & (model.Document.project_id == project_id)).first()
+  if document is None:
+    raise QueryException("Invalid document")
+
+  # ensure existence of user specific asset dir
+  root = os.path.abspath(os.path.join(config.ASSETS, user_id, "attachments"))
+  if not os.path.exists(root):
+    os.makedirs(root)
+ 
+  # each attachment
+  total_size = 0
+  saved = []
+  try:
+    for attachment in attachments:
+      # check size is ok
+      item = model.Attachment(project=project, document=document, name=attachment["name"], size=attachment["size"], location="server")
+      db.add(item)
+      db.flush() # get item id
+      # save to filesystem
+      target_filename = os.path.join(root, item.id)
+      decoded = base64.b64decode(attachment["content"])
+      if len(decoded) > config.MAX_ATTACHMENT_SIZE:
+        raise QueryException("File too large")
+
+      total_size += len(decoded)
+
+      if user.category == 'free' and total_size > config.MAX_FREE_USER_STORAGE:
+        raise QueryException("Quota exceeded")
+
+      with open(target_filename, "wb") as fh:
+        fh.write(decoded)
+      saved.append(target_filename)
+  except:
+    # deal with already saved files if an exception occurs
+    for filename in saved:
+      os.remove(filename)
+    raise
+
+  user.storage_used += total_size
+  db.commit()
+
+def attachment(db, user_id, project_id, attachment_id):
+  user = db.query(model.User).filter(model.User.id == user_id).first()
+  if user is None:
+    raise QueryException("Authentication failed")
+  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
+  if project is None:
+    raise QueryException("Invalid project")
+  attachment = db.query(model.Attachment).filter((model.Attachment.id == attachment_id) & (model.Attachment.project_id == project_id)).first()
+
+  if attachment is None:
+    raise QueryException("Attachment not found")
+
+  path = os.path.abspath(os.path.join(config.ASSETS, user_id, "attachments", attachment.id))
+  
+  return {'filename': path, 'name': attachment.name}
+  
+ 
 def update_document(db, user_id, project_id, document_id, content):
   user = db.query(model.User).filter(model.User.id == user_id).first()
   if user is None:
@@ -291,5 +361,24 @@ def delete_document(db, user_id, project_id, document_id):
     successor.predecessor = document.predecessor
   
   db.delete(document)
+  db.commit()
+
+def delete_attachment(db, user_id, project_id, attachment_id):
+  user = db.query(model.User).filter(model.User.id == user_id).first()
+  if user is None:
+    raise QueryException("Authentication failed")
+  project = db.query(model.Project).filter(model.Project.id == project_id, model.Project.owner == user).first()
+  if project is None:
+    raise QueryException("Invalid project")
+  attachment = db.query(model.Attachment).filter((model.Attachment.id == attachment_id) & (model.Attachment.project_id == project_id)).one_or_none()
+  if attachment is None:
+    raise QueryException("Invalid attachment")
+
+
+  filename = os.path.abspath(os.path.join(config.ASSETS, user_id, "attachments", attachment.id))
+  os.remove(filename)
+ 
+  user.storage_used -= attachment.size
+  db.delete(attachment)
   db.commit()
 

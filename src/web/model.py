@@ -24,6 +24,8 @@ class User(Base):
   id = sqlalchemy.Column(sqlalchemy.String, primary_key=True, default=generate_id)
   created = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.utcnow, nullable=False)
   email = sqlalchemy.Column(sqlalchemy.String(250), nullable=False)
+  category = sqlalchemy.Column(sqlalchemy.String(8), nullable=False, default="free")
+  storage_used = sqlalchemy.Column(sqlalchemy.Integer, nullable=False, default=0)
 
 class Project(Base):
   __tablename__ = 'project'
@@ -39,6 +41,19 @@ class Project(Base):
 
   def summary(self):
     return {'id': self.id, 'name': self.name, 'renderer': self.renderer, 'created': self.created}
+
+class ProjectUser(Base):
+  __tablename__ = 'project_user'
+  id = sqlalchemy.Column(sqlalchemy.String, primary_key=True, default=generate_id)
+  created = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.utcnow, nullable=False)
+
+  user_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey("app_user.id"), nullable=False)
+  user = sqlalchemy.orm.relationship('User', backref=sqlalchemy.orm.backref('project_users', lazy='dynamic'))
+
+  project_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey("project.id"), nullable=False)
+  project = sqlalchemy.orm.relationship('Project', backref=sqlalchemy.orm.backref('project_users', lazy='dynamic'))
+
+  access = sqlalchemy.Column(sqlalchemy.String(8), nullable=False, default='readonly') # readonly, comment, write
 
 # a tree of documents
 class Document(Base):
@@ -75,4 +90,30 @@ class Document(Base):
     '''
       full document info
     '''
-    return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'content': self.content, 'renderer': self.renderer}
+    return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'content': self.content, 'renderer': self.renderer, 'attachments': [item.detail() for item in self.document_attachments]}
+
+class Attachment(Base):
+  __tablename__ = 'attachment'
+
+  id = sqlalchemy.Column(sqlalchemy.String, primary_key=True, default=generate_id)
+  created = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.utcnow, nullable=False)
+
+  name = sqlalchemy.Column(sqlalchemy.String(250), nullable=False)
+  location = sqlalchemy.Column(sqlalchemy.String(250), nullable=False) # absolute or relative url
+  size = sqlalchemy.Column(sqlalchemy.Integer, nullable=False, default=0)
+
+  # project for this document
+  project_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey("project.id"), nullable=False)
+  project = sqlalchemy.orm.relationship('Project', backref=sqlalchemy.orm.backref('project_attachments', lazy='dynamic'))
+
+  # associated document
+  document_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey("document.id"), nullable=True)
+  document = sqlalchemy.orm.relationship("Document", backref=sqlalchemy.orm.backref('document_attachments', lazy='dynamic'))
+
+  def detail(self):
+    '''
+      summary of attachment info
+    '''
+    return {'id': self.id, 'name': self.name, 'location': self.location, 'size': self.size}
+
+

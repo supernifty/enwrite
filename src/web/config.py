@@ -4,7 +4,9 @@ PORT=5000
 
 AUTHENTICATE=False
 DEFAULT_USER='Local User'
-ASSETS='~/assets'
+ASSETS='./assets'
 
-#PANDOC="pandoc -o {root}/fragment.html {root}/fragment.tex --verbose"
-PANDOC='docker run --rm --mount type=bind,source={root},target=/source jagregory/pandoc fragment.tex -o fragment.html --verbose'
+PANDOC='docker run --rm --mount type=bind,source={root},target=/source jagregory/pandoc _fragment.tex -o _fragment.html --verbose'
+
+MAX_ATTACHMENT_SIZE=10e6
+MAX_FREE_USER_STORAGE=50e6

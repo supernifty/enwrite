@@ -15,14 +15,9 @@ If you wish to use a database such as Postgres:
 pip install -U psycopg2
 ```
 
-If you wish to use the Latex renderer, install Pandoc using your OS installer, for example:
+The Latex renderer is executed via a Docker container.
 ```
-sudo apt install pandoc
-```
-
-Create the following helper directories:
-```
-mkdir tmp
+sudo apt install docker
 ```
 
 # Running
@@ -30,11 +25,13 @@ mkdir tmp
 python3 main.py
 ```
 
+# The following is implemented:
+* Markdown and Latex support
+* Math formula
+
 # Roadmap
 We hope to add the following:
 * Collaboration
-* Math formula
-* Markdown and Latex support
 * Reference management
 * Checkpointing, restore
 * Attachments, notes
@@ -46,4 +43,4 @@ We hope to add the following:
 * w2ui
 * flask
 * postgres
-* dragula
+* docker

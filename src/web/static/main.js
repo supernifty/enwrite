@@ -48,6 +48,7 @@ var
                 onClose: close_tab
               }
             },
+            { type: 'right', size: 240, resizable: true, style: 'border: 0; background-color: #ccc; color: #000; padding-left: 4px;' },
             { type: 'bottom', size: 18, style: 'border: 0px; border-top: 1px solid silver; background-color: #ccc; color: #000;', overflow: 'hidden'}
         ]
     });
@@ -97,6 +98,80 @@ var
     // drag and drop documents
   },
 
+  add_attachment = function() {
+    if (!w2ui.add_attachment) {
+        $().w2form({
+            name: 'add_attachment',
+            style: 'border: 0px; background-color: transparent;',
+            url: '/set/attachment',
+            formHTML: 
+                '<div class="w2ui-page page-0">'+
+                '    <div class="w2ui-field">'+
+                '        <label>Files:</label>'+
+                '        <div>'+
+                '           <input name="file" id="file" style="width: 400px"/>'+
+                '        </div>'+
+                '    </div>'+
+                '</div>'+
+                '<div class="w2ui-buttons">'+
+                '    <button class="w2ui-btn" name="reset">Reset</button>'+
+                '    <button class="w2ui-btn" name="ok">OK</button>'+
+                '</div>',
+            fields: [
+                { field: 'file', type: 'file', required: true }
+            ],
+            record: { 
+                project_id: g.project_id,
+                //id: g.documents[g.document_target].document.id
+                id: g.document_target
+            },
+            actions: {
+                "ok": function () { 
+                  this.save(function (data) {
+                    if (data.status == 'success') {
+                        delete g.tab_cache['tab_' + g.document_target];
+                        load_document(g.document_target); 
+                        $().w2popup('close');
+                    }
+                  }) 
+                },
+                "reset": function () { this.clear(); }
+            }
+        });
+    }
+    $().w2popup('open', {
+        title   : 'Add attachment',
+        body    : '<div id="form" style="width: 100%; height: 100%;"></div>',
+        style   : 'padding: 15px 0px 0px 0px',
+        width   : 600,
+        height  : 300, 
+        showMax : true,
+        onToggle: function (event) {
+            $(w2ui.add_attachment.box).hide();
+            event.onComplete = function () {
+                $(w2ui.add_attachment.box).show();
+                w2ui.add_attachment.resize();
+            }
+        },
+        onOpen: function (event) {
+            event.onComplete = function () {
+                // specifying an onOpen handler instead is equivalent to specifying an onBeforeOpen handler, which would make this code execute too early and hence not deliver.
+                $('#w2ui-popup #form').w2render('add_attachment');
+            }
+        }
+    });
+    return false;
+ },
+
+  update_document_details = function() {
+    var current = g.tab_cache['tab_' + g.document_target], 
+      list = '';
+    for (attachment in current.attachments) {
+      list += '<li><a target="_blank" href="/get/attachment?project_id=' + g.project_id + '&id=' + current.attachments[attachment].id + '">' + escape_html(current.attachments[attachment].name) + '</a>&nbsp;<a href="" onclick="return delete_attachment(\'' + current.attachments[attachment].id + '\')"><i class="fas fa-trash"></i></a></li>';
+    }
+    w2ui.main_layout.content('right', '<h3>' + current.attachments.length + ' attachment(s)</h3><div class="attachments"><ul>' + list + '</ul><p><a href="" onclick="return add_attachment()">Upload...</a></p></div>');
+  },
+
   select_tab = function(ev) {
     // update html
     var selected_document = g.tab_cache['tab_' + ev.target.substr(4)];
@@ -120,11 +195,12 @@ var
           }
         }
         content += '</div>';
-        w2ui.main_layout.content('main', content);
+        w2ui.main_layout.content('main', content); // main content
         $('.child_outer').on('click', sub_open_document);
+        update_document_details(); // right tab
       }
     }
-    else {
+    else { // document
       if (g.document_target != ev.target.substr(4)) { // changed selection 
         $("#editable_content").off('change keyup paste mouseup', content_changed);
   
@@ -141,9 +217,10 @@ var
         $('#editable_content').val(current.content);
         $('#editable_content').on('change keyup paste mouseup', content_changed);
         preview_document();
+        update_document_details(); // right tab
       }
       else {
-        toggle_document_view();
+        toggle_document_view(); // editing versus previewing
       }
     }
   },
@@ -258,31 +335,36 @@ var
   },
 
   open_document = function(document_id) {
-    var doc = g.documents[document_id],
-        target_id = 'tab_' + document_id,
-        existing = find_tab(target_id);
+    var target_id = 'tab_' + document_id,
+        existing = find_tab(target_id),
+        doc = g.documents[document_id];
     if (existing == null) {
-      if (doc.document.document_type == 'folder') {
-        w2ui.main_layout_main_tabs.add({ id: target_id, text: escape_html(doc.document.name), closable: true });
-        // load content for this document
-        $.ajax({ 
-          url: "/get/folder?document_id=" + doc.document.id + "&project_id=" + g.project_id
-        })
-        .done(show_folder(target_id))
-        .fail(show_error);
-      }
-      else {
-        w2ui.main_layout_main_tabs.add({ id: target_id, text: escape_html(doc.document.name), closable: true });
-        // load content for this document
-        $.ajax({ 
-          url: "/get/document?document_id=" + doc.document.id + "&project_id=" + g.project_id
-        })
-        .done(show_document(target_id))
-        .fail(show_error);
-      }
+      w2ui.main_layout_main_tabs.add({ id: target_id, text: escape_html(doc.document.name), closable: true });
+      load_document(document_id);
     }
     else {
       w2ui.main_layout_main_tabs.click(target_id); // select existing tab
+    }
+  },
+
+  load_document = function(document_id) {
+    var doc = g.documents[document_id],
+        target_id = 'tab_' + document_id;
+    if (doc.document.document_type == 'folder') {
+      // load content for this document
+      $.ajax({ 
+        url: "/get/folder?document_id=" + doc.document.id + "&project_id=" + g.project_id
+      })
+      .done(show_folder(target_id))
+      .fail(show_error);
+    }
+    else {
+      // load content for this document
+      $.ajax({ 
+        url: "/get/document?document_id=" + doc.document.id + "&project_id=" + g.project_id
+      })
+      .done(show_document(target_id))
+      .fail(show_error);
     }
   },
 
@@ -292,6 +374,7 @@ var
       g.tab_cache[target_id] = data.document;
       g.tab_cache[target_id].children = data.children;
       w2ui.main_layout_main_tabs.click(target_id); // select tab to display content
+      update_document_details(); // right tab
     }
   },
 
@@ -305,6 +388,7 @@ var
       }
       g.tab_cache[target_id] = data.document;
       w2ui.main_layout_main_tabs.click(target_id); // select tab
+      update_document_details(); // right tab
     }
   },
 
@@ -533,7 +617,6 @@ var
   load_project = function() {
     remove_sidebar_nodes();
     w2ui.main_sidebar.refresh();
-    // TODO load folders
     set_status('Opened project "' + g.project_name + '"', true);
     get_documents();
   },
@@ -632,6 +715,35 @@ var
       show_error(data.message);
     }
   },
+
+  delete_attachment = function(attachment_id) {
+    w2confirm({ msg: 'Are you sure you want to delete this item? This cannot be undone.', btn_yes: {text: 'Delete'}, btn_no: {text: 'Cancel'} })
+      .yes(function () { 
+        $.ajax({
+          type: "POST",
+          url: '/set/attachment_d', 
+          data: {
+            id: attachment_id,
+            project_id: g.project_id
+          }})
+            .done(deleted_attachment)
+            .fail(show_error);
+      })
+      .no(function () {});
+    return false;
+  },
+
+  deleted_attachment = function(data) {
+    if (data.status == 'success') {
+      delete g.tab_cache['tab_' + g.document_target];
+      load_document(g.document_target); 
+      set_status('Deleted item.');
+    }
+    else {
+      show_error(data.message);
+    }
+  },
+
 
   run_queue = function() {
     if (g.queue.length > 0) {
