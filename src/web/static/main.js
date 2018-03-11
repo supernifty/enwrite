@@ -166,7 +166,7 @@ var
   update_document_details = function() {
     var current = g.tab_cache['tab_' + g.document_target], 
       list = '';
-    for (attachment in current.attachments) {
+    for (var attachment in current.attachments) {
       list += '<li><a target="_blank" href="/get/attachment?project_id=' + g.project_id + '&id=' + current.attachments[attachment].id + '">' + escape_html(current.attachments[attachment].name) + '</a>&nbsp;<a href="" onclick="return delete_attachment(\'' + current.attachments[attachment].id + '\')"><i class="fas fa-trash"></i></a></li>';
     }
     w2ui.main_layout.content('right', '<h3>' + current.attachments.length + ' attachment(s)</h3><div class="attachments"><ul>' + list + '</ul><p><a href="" onclick="return add_attachment()">Upload...</a></p></div>');
