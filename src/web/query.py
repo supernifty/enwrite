@@ -3,6 +3,8 @@ import base64
 import datetime
 import os
 
+import sqlalchemy
+
 import config
 import model
 
@@ -62,6 +64,17 @@ def documents(db, user_id, project_id):
   if root is None:
     return []
   return make_tree(documents[root], documents)
+
+def search(db, user_id, project_id, q):
+  user = db.query(model.User).filter(model.User.id == user_id).first()
+  if user is None:
+    raise QueryException("Authentication error")
+  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
+  if project is None:
+    raise QueryException("Invalid project")
+  
+  result = db.query(model.Document).filter(model.Document.project == project, sqlalchemy.or_(model.Document.name.contains(q), model.Document.content.contains(q)))
+  return result
 
 def make_tree(root, documents):
   result = []

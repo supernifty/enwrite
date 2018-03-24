@@ -66,7 +66,7 @@ var
                 ]
             },
             { type: 'spacer', id: 'menu_last' },
-            { type: 'break' },
+            { type: 'break', id: 'menu_right' },
             { type: 'button', id: 'menu_about', text: 'About' },
             { type: 'menu', id: 'menu_user', text: 'Loading...', icon: 'fa-star', items: [ 
                 { text: 'Logout', id: 'logout', img: 'icon-page' }, 
@@ -175,7 +175,7 @@ var
   select_tab = function(ev) {
     // update html
     var selected_document = g.tab_cache['tab_' + ev.target.substr(4)];
-    if (selected_document.document_type == 'folder') { 
+    if (selected_document.document_type == 'folder') {
       if (g.document_target != ev.target.substr(4)) { // changed selection 
         // render each child
         g.document_target = ev.target.substr(4);
@@ -200,7 +200,7 @@ var
         update_document_details(); // right tab
       }
     }
-    else { // document
+    else if (selected_document.document_type == 'document') {
       if (g.document_target != ev.target.substr(4)) { // changed selection 
         $("#editable_content").off('change keyup paste mouseup', content_changed);
   
@@ -222,6 +222,22 @@ var
       else {
         toggle_document_view(); // editing versus previewing
       }
+    }
+    else if (selected_document.document_type == 'search') { 
+      g.document_target = 'search';
+      current = g.tab_cache['tab_search'].documents;
+      var content = '<div>' +
+        current.length + ' matching document(s) found.' +
+        '<ul>';
+      for (var document of current) {
+        content += '<li><a href="#" onclick="open_document(\'' + document.id + '\'); return false">' + document.name + '</a></li>';
+      }
+      content += '</ul></div>';
+      w2ui.main_layout.content('main', content); // main content
+      w2ui.main_layout.content('right', '');
+    }
+    else {
+      show_error('unrecognized document type ' + selected_document.document_type);
     }
   },
 
@@ -443,6 +459,7 @@ var
     submenu.items = remove_by_id(submenu.items, "delete_project");
     w2ui.main_toolbar.remove('menu_add');
     w2ui.main_toolbar.remove('menu_document');
+    w2ui.main_toolbar.remove('menu_search');
     w2ui.main_toolbar.refresh();
     w2ui.main_sidebar.menu = [];
     get_projects();
@@ -588,26 +605,37 @@ var
   },
 
   open_project = function(id, name) { // note that name is already escaped
+    // toolbar
     w2ui.main_toolbar.get('menu_file').items.push({ text: 'Close Project ' + name, id: 'close_project', icon: 'fas fa-book'}); 
     w2ui.main_toolbar.get('menu_file').items.push({ text: 'Delete Project ' + name, id: 'delete_project', icon: 'fas fa-book'}); 
     w2ui.main_toolbar.insert('menu_last', { type: 'menu', text: 'Add', id: 'menu_add', icon: 'fas fa-plus', items: [
       { text: 'New Folder', id: 'add_folder', icon: 'fas fa-folder'},
       { text: 'New Document', id: 'add_document', icon: 'fas fa-file'}
-    ]}); 
-    w2ui.main_toolbar.refresh();
-    // enable sidebar context menu
-    w2ui.main_sidebar.menu = [
-      {id: 'sidebar_open_item', text: 'Open item', icon: 'fas fa-folder-open'},
-      {id: 'sidebar_delete_item', text: 'Delete item', icon: 'fas fa-times'},
-      {id: 'sidebar_edit_item', text: 'Properties', icon: 'fas fa-edit'}
-    ]
+    ]});
+
     w2ui.main_toolbar.insert('menu_last', { type: 'menu', id: 'menu_document', caption: 'Document', img: 'icon-page', items: [
       { text: 'Edit', id: 'edit_document' },
       { text: 'Preview', id: 'preview_document' },
       { text: 'Save', id: 'save_document' },
       { text: 'Save All', id: 'save_all' }
     ]});
- 
+
+    w2ui.main_toolbar.insert('menu_right', { type: 'html', id: 'menu_search', html: function(item) {
+      return '<div style="color: black">' +
+        '<form onsubmit="return search_project()"><input id="search" type="search" name="q" placeholder="Search"/>' +
+        '<button type="submit" style="height: 25px; width: 25px"><i class="fa fa-search"></i></button></form>' +
+        '</div>';
+      } } );
+
+    w2ui.main_toolbar.refresh();
+
+    // enable sidebar context menu
+    w2ui.main_sidebar.menu = [
+      {id: 'sidebar_open_item', text: 'Open item', icon: 'fas fa-folder-open'},
+      {id: 'sidebar_delete_item', text: 'Delete item', icon: 'fas fa-times'},
+      {id: 'sidebar_edit_item', text: 'Properties', icon: 'fas fa-edit'}
+    ];
+
     g.project_id = id;
     g.project_name = name;
     g.unsaved_count = 0;
@@ -744,6 +772,29 @@ var
     }
   },
 
+  search_project = function() {
+    $.ajax({
+      type: "POST",
+      url: '/search', 
+      data: {
+        q: $("input[name='q']").val(),
+        project_id: g.project_id
+      }})
+      .done(show_search)
+      .fail(show_error);
+    return false;
+  },
+
+  show_search = function(data) {
+    // find or create search tab
+    var target_id = 'tab_search',
+        existing = find_tab(target_id);
+    if (existing == null) {
+      w2ui.main_layout_main_tabs.add({ id: target_id, text: 'Search', closable: true });
+    }
+    g.tab_cache[target_id] = { 'document_type': 'search', 'documents': data.documents, 'unsaved': false };
+    w2ui.main_layout_main_tabs.click(target_id); // select tab to display content
+  },
 
   run_queue = function() {
     if (g.queue.length > 0) {
@@ -802,6 +853,9 @@ var
 
   save_current_document = function(callback) {
     if (g.document_target == undefined) {
+      return;
+    }
+    if (g.document_target == "search") {
       return;
     }
 

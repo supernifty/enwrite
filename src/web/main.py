@@ -178,6 +178,15 @@ def set_data(category):
 
     return flask.jsonify(status="error", message="Unrecognized command {}".format(category))
 
+# search
+@app.route("/search", methods=['POST'])
+def search():
+    project_id = flask.request.form['project_id']
+    q = flask.request.form['q']
+    if flask.request.form['project_id'] is None:
+        raise query.QueryException("Required parameter project_id not provided")
+    return flask.jsonify(documents=query.summary(query.search(db(), authenticator.user_id(flask.session), project_id, q)))
+
 @app.route("/render/latex", methods=['POST'])
 def render():
     if not authenticator.is_auth(flask.session):
