@@ -35,7 +35,7 @@ _db_session = None
 def db():
     global _db_session
     if _db_session is None: # first time
-        engine = sqlalchemy.create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
+        engine = sqlalchemy.create_engine(app.config['SQLALCHEMY_DATABASE_URI']) # for debugging , echo=True)
         # get session
         session_maker = sqlalchemy.orm.scoped_session(
             sqlalchemy.orm.sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -14,7 +14,17 @@ import sqlalchemy
 import sqlalchemy.ext.declarative
 import sqlalchemy.orm
 
+# postgres full text search
+import sqlalchemy.sql
+import sqlalchemy.dialects.postgresql
+
 Base = sqlalchemy.ext.declarative.declarative_base()
+
+def create_tsvector(*args):
+  exp = args[0]
+  for e in args[1:]:
+    exp += ' ' + e
+  return sqlalchemy.sql.func.to_tsvector('english', exp)
 
 def generate_id():
   return str(uuid.uuid4())
@@ -79,6 +89,20 @@ class Document(Base):
   # predecessor (previous sibling)
   predecessor_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey("document.id"), nullable=True)
   successors = sqlalchemy.orm.relationship("Document", foreign_keys=[predecessor_id], post_update=True, backref=sqlalchemy.orm.backref('predecessor', remote_side=[id]))
+
+  # full text indexing, used by match query and index creation
+  __ts_vector__ = create_tsvector(
+    name,
+    content,
+  )
+
+  __table_args__ = (
+    sqlalchemy.Index(
+      'idx_document_fts',
+      __ts_vector__,
+      postgresql_using='gin'
+    ),
+  )
 
   def summary(self):
     '''

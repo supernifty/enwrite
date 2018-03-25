@@ -2,3 +2,4 @@ wheel
 Flask
 Flask-SQLAlchemy
 flask_oauthlib
+psycopg2-binary

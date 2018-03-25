@@ -1,5 +1,5 @@
 
-SQLALCHEMY_DATABASE_URI="sqlite:///nifty.db"
+SQLALCHEMY_DATABASE_URI="postgresql:///niftywrite"
 PORT=5000
 
 AUTHENTICATE=False

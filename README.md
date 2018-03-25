@@ -10,9 +10,10 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-If you wish to use a database such as Postgres:
+NiftyWrite requires (postgres)[https://www.postgresql.org].
+To create the database:
 ```
-pip install -U psycopg2
+createdb niftywrite
 ```
 
 The Latex renderer is executed via a Docker container.

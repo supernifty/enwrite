@@ -224,6 +224,16 @@ var
       }
     }
     else if (selected_document.document_type == 'search') { 
+      if (g.document_target != ev.target.substr(4)) { // changed selection 
+        $("#editable_content").off('change keyup paste mouseup', content_changed);
+  
+        // save changes to old tab
+        var current;
+        if (g.document_target != null) {
+          current = g.tab_cache['tab_' + g.document_target];
+          current.content = $('#editable_content').val();
+        }
+      }
       g.document_target = 'search';
       current = g.tab_cache['tab_search'].documents;
       var content = '<div>' +
