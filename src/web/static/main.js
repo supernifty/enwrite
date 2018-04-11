@@ -19,6 +19,7 @@ var
   },
 
   MAX_SUMMARY = 1024,
+  MAX_TITLE = 40,
 
   init = function() {
     // markdown renderer
@@ -258,7 +259,7 @@ var
       current.unsaved = true;
       g.unsaved_count += 1;
       set_status(g.unsaved_count + ' unsaved document(s)');
-      w2ui.main_layout_main_tabs.get('tab_' + g.document_target).text = escape_html(current.name) + ' *';
+      w2ui.main_layout_main_tabs.get('tab_' + g.document_target).text = escape_html(max_length(current.name, MAX_TITLE)) + ' *';
       w2ui.main_layout_main_tabs.refresh();
     }
   },
@@ -365,7 +366,7 @@ var
         existing = find_tab(target_id),
         doc = g.documents[document_id];
     if (existing == null) {
-      w2ui.main_layout_main_tabs.add({ id: target_id, text: escape_html(doc.document.name), closable: true });
+      w2ui.main_layout_main_tabs.add({ id: target_id, text: escape_html(max_length(doc.document.name, MAX_TITLE)), closable: true });
       load_document(document_id);
     }
     else {
@@ -889,7 +890,7 @@ var
         current.unsaved = false;
         g.unsaved_count -= 1;
         set_status(g.unsaved_count + ' unsaved document(s)');
-        w2ui.main_layout_main_tabs.get('tab_' + document_target).text = escape_html(current.name);
+        w2ui.main_layout_main_tabs.get('tab_' + document_target).text = escape_html(max_length(current.name, MAX_TITLE));
         w2ui.main_layout_main_tabs.refresh();
       }
       if (callback != undefined) {
