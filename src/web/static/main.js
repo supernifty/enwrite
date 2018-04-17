@@ -298,7 +298,7 @@ var
           content: $('#editable_content').val()
         }
         }).done(rendered)
-          .fail(show_error);
+          .fail(ajax_fail);
     }
     else {
       $('#preview_content').html(marked(escape_html($('#editable_content').val())));
@@ -390,7 +390,7 @@ var
         url: "/get/folder?document_id=" + doc.document.id + "&project_id=" + g.project_id
       })
       .done(show_folder(target_id))
-      .fail(show_error);
+      .fail(ajax_fail);
     }
     else {
       // load content for this document
@@ -398,7 +398,7 @@ var
         url: "/get/document?document_id=" + doc.document.id + "&project_id=" + g.project_id
       })
       .done(show_document(target_id))
-      .fail(show_error);
+      .fail(ajax_fail);
     }
   },
 
@@ -518,7 +518,7 @@ var
             id: g.project_id
           }
           }).done(deleted_project)
-            .fail(show_error);
+            .fail(ajax_fail);
       })
       .no(function () {});
   },
@@ -607,7 +607,7 @@ var
       url: "/get/projects"
     })
     .done(show_projects)
-    .fail(show_error);
+    .fail(ajax_fail);
   },
 
   show_projects = function(data) {
@@ -747,7 +747,7 @@ var
             project_id: g.project_id
           }})
             .done(deleted_document)
-            .fail(show_error);
+            .fail(ajax_fail);
       })
       .no(function () {});
   },
@@ -773,7 +773,7 @@ var
             project_id: g.project_id
           }})
             .done(deleted_attachment)
-            .fail(show_error);
+            .fail(ajax_fail);
       })
       .no(function () {});
     return false;
@@ -799,7 +799,7 @@ var
         project_id: g.project_id
       }})
       .done(show_search)
-      .fail(show_error);
+      .fail(ajax_fail);
     return false;
   },
 
@@ -866,7 +866,7 @@ var
         project_id: g.project_id
       }})
       .done(saved_document(document_target, callback))
-      .fail(show_error);
+      .fail(ajax_fail);
   },
 
   save_current_document = function(callback) {
@@ -886,7 +886,7 @@ var
         project_id: g.project_id
       }})
       .done(saved_document(g.document_target, callback))
-      .fail(show_error);
+      .fail(ajax_fail);
   },
 
   saved_document = function(document_target, callback) {
@@ -895,10 +895,14 @@ var
       var current = g.tab_cache['tab_' + document_target];
       if (current.unsaved == true) {
         current.unsaved = false;
+        current.updated = Date.now();
         g.unsaved_count -= 1;
         set_status(g.unsaved_count + ' unsaved document(s)');
-        w2ui.main_layout_main_tabs.get('tab_' + document_target).text = escape_html(max_length(current.name, MAX_TITLE));
+        w2ui.main_layout_main_tabs.get('tab_' + document_target).text = escape_html(max_length(current.name, MAX_TITLE)); // remove unsaved mark on title
         w2ui.main_layout_main_tabs.refresh();
+        if (g.document_target == document_target) { // saved current document
+          update_document_details();
+        }
       }
       if (callback != undefined) {
         callback();
@@ -1053,7 +1057,7 @@ var
       url: "/get/documents?project_id=" + g.project_id
     })
     .done(show_documents)
-    .fail(show_error);
+    .fail(ajax_fail);
   },
 
   document_image = function(item) {
@@ -1115,7 +1119,7 @@ var
           target_id: ev.target.id.substring(14)
         }
         }).done(dropped)
-         .fail(show_error);
+         .fail(ajax_fail);
     }
     else if (ev.target.className == 'w2ui-sidebar-div') {
       $.ajax({
@@ -1127,7 +1131,7 @@ var
           target_id: "root"
         }
         }).done(dropped)
-         .fail(show_error);
+         .fail(ajax_fail);
      }
     else {
       set_status('Cannot move document here.');
@@ -1148,7 +1152,11 @@ var
     var nd = []; 
     for (var i in w2ui.main_sidebar.nodes) nd.push(w2ui.main_sidebar.nodes[i].id);
     w2ui.main_sidebar.remove.apply(w2ui.main_sidebar, nd);
-  }
+  },
+
+  ajax_fail = function(xhr, textStatus, errorThrown) {
+    show_error('Unable to communicate with server: ' + textStatus);
+  },
  
   show_error = function(msg) {
     if (msg == undefined) {
