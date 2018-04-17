@@ -114,7 +114,7 @@ class Document(Base):
     '''
       full document info
     '''
-    return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'content': self.content, 'renderer': self.renderer, 'attachments': [item.detail() for item in self.document_attachments]}
+    return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'content': self.content, 'renderer': self.renderer, 'updated': self.updated, 'attachments': [item.detail() for item in self.document_attachments]}
 
 class Attachment(Base):
   __tablename__ = 'attachment'

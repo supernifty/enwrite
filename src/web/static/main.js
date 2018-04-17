@@ -162,15 +162,22 @@ var
         }
     });
     return false;
- },
+  },
 
   update_document_details = function() {
     var current = g.tab_cache['tab_' + g.document_target], 
-      list = '';
+      attachment_list = '',
+      summary_list = '';
+    // attachments
     for (var attachment in current.attachments) {
-      list += '<li><a target="_blank" href="/get/attachment?project_id=' + g.project_id + '&id=' + current.attachments[attachment].id + '">' + escape_html(current.attachments[attachment].name) + '</a>&nbsp;<a href="" onclick="return delete_attachment(\'' + current.attachments[attachment].id + '\')"><i class="fas fa-trash"></i></a></li>';
+      attachment_list += '<li><a target="_blank" href="/get/attachment?project_id=' + g.project_id + '&id=' + current.attachments[attachment].id + '">' + escape_html(current.attachments[attachment].name) + '</a>&nbsp;<a href="" onclick="return delete_attachment(\'' + current.attachments[attachment].id + '\')"><i class="fas fa-trash"></i></a></li>';
     }
-    w2ui.main_layout.content('right', '<h3>' + current.attachments.length + ' attachment(s)</h3><div class="attachments"><ul>' + list + '</ul><p><a href="" onclick="return add_attachment()">Upload...</a></p></div>');
+    // summary information
+    summary_list += '<li>Updated ' + moment(current.updated).fromNow() + '</li>';
+    // write to view
+    w2ui.main_layout.content('right', 
+      '<h3>Details</h3><ul>' + summary_list + '</ul>' +
+      '<h3>' + current.attachments.length + ' attachment(s)</h3><div class="attachments"><ul>' + attachment_list + '</ul><p><a href="" onclick="return add_attachment()">Upload...</a></p></div>');
   },
 
   select_tab = function(ev) {

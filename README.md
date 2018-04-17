@@ -5,7 +5,7 @@ Manage writing a large body of work such as a thesis or book
 ```
 git clone https://github.com/supernifty/NiftyWrite
 cd NiftyWrite/src/web
-python3 -m venv venv
+python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
@@ -23,7 +23,7 @@ sudo apt install docker
 
 # Running
 ```
-python3 main.py
+python main.py
 ```
 
 # The following is implemented:
