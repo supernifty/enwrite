@@ -45,12 +45,12 @@ ul {
     background-color: black;
 }
 
-.attachments a {
+.details a {
     color: black;
     /*text-decoration: none;*/
 }
 
-.attachments ul {
+.details ul {
     margin: 4px 0px 4px 16px;
     font-size: 12px;
 }

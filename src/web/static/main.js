@@ -176,8 +176,8 @@ var
     summary_list += '<li>Updated ' + moment(current.updated).fromNow() + '</li>';
     // write to view
     w2ui.main_layout.content('right', 
-      '<h3>Details</h3><ul>' + summary_list + '</ul>' +
-      '<h3>' + current.attachments.length + ' attachment(s)</h3><div class="attachments"><ul>' + attachment_list + '</ul><p><a href="" onclick="return add_attachment()">Upload...</a></p></div>');
+      '<h3>Details</h3><div class="details"><ul>' + summary_list + '</ul></div>' +
+      '<h3>' + current.attachments.length + ' attachment(s)</h3><div class="details"><ul>' + attachment_list + '</ul><p><a href="" onclick="return add_attachment()">Upload...</a></p></div>');
   },
 
   select_tab = function(ev) {
