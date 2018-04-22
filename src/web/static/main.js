@@ -4,7 +4,8 @@ var
     'document_target': null,
     'tab_cache': {},
     'queue': [],
-    'previewing_document': false
+    'previewing_document': false,
+    'expanded': {} // currently expanded nodes
   },
 
   ENTITY_MAP = {
@@ -87,6 +88,16 @@ var
         if (ev.target && ev.target.startsWith('document_')) {
           g.sidebar_target = ev.target;
         }
+      },
+      onCollapse: function(ev) {
+        if (ev.target && ev.target.startsWith('document_')) {
+          delete g.expanded[ev.target.substr(9)];
+        }        
+      },
+      onExpand: function(ev) {
+        if (ev.target && ev.target.startsWith('document_')) {
+          g.expanded[ev.target.substr(9)] = 1;
+        }        
       },
       onMenuClick: sidebar_menu_handler,
       onDblClick: sidebar_open_document,
@@ -1071,14 +1082,15 @@ var
 
   make_tree = function(documents) {
     var result = [], document_id;
-    for (idx in documents) {
+    for (var idx in documents) {
       g.documents[documents[idx].document.id] = documents[idx];
       result.push({
         id: 'document_' + documents[idx].document.id, 
         text: escape_html(documents[idx].document.name), 
         img: document_image(documents[idx].document),
-        nodes: make_tree(documents[idx].children)
-      }); 
+        nodes: make_tree(documents[idx].children),
+        expanded: documents[idx].document.id in g['expanded']
+      });
     }
     return result;
   },
