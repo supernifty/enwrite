@@ -5,7 +5,9 @@ var
     'tab_cache': {},
     'queue': [],
     'previewing_document': false,
-    'expanded': {} // currently expanded nodes
+    'expanded': {}, // currently expanded nodes
+    'open': {}, // currently open documents
+    'project_show_documents': false
   },
 
   ENTITY_MAP = {
@@ -92,11 +94,13 @@ var
       onCollapse: function(ev) {
         if (ev.target && ev.target.startsWith('document_')) {
           delete g.expanded[ev.target.substr(9)];
+          save_session();
         }        
       },
       onExpand: function(ev) {
         if (ev.target && ev.target.startsWith('document_')) {
           g.expanded[ev.target.substr(9)] = 1;
+          save_session();
         }        
       },
       onMenuClick: sidebar_menu_handler,
@@ -107,7 +111,7 @@ var
 
     get_projects();
 
-    // drag and drop documents
+    load_session();
   },
 
   add_attachment = function() {
@@ -334,6 +338,10 @@ var
       }
     }
     
+    // clear session
+    delete g.open[g.document_target];
+    save_session();
+
     // clear cache
     delete g.tab_cache[ev.target];
     w2ui.main_layout.content('main', '');
@@ -386,6 +394,8 @@ var
     if (existing == null) {
       w2ui.main_layout_main_tabs.add({ id: target_id, text: escape_html(max_length(doc.document.name, MAX_TITLE)), closable: true });
       load_document(document_id);
+      g.open[document_id] = 1;
+      save_session();
     }
     else {
       w2ui.main_layout_main_tabs.click(target_id); // select existing tab
@@ -675,6 +685,7 @@ var
     remove_sidebar_nodes();
     w2ui.main_sidebar.refresh();
     set_status('Opened project "' + g.project_name + '"', true);
+    g.project_show_documents = true; // so we can load session
     get_documents();
   },
 
@@ -1103,7 +1114,19 @@ var
       w2ui.main_sidebar.add({id: 'placeholder', text: 'No documents.'});
     }
     w2ui.main_sidebar.refresh();
+    if (g.project_show_documents) {
+      g.project_show_documents = false;
+      open_session_documents();
+    }
   },
+
+  open_session_documents = function() {
+    for (var key in g.open) {
+      if (key in g.documents) {
+        open_document(key);
+      }
+    }
+  }
 
   dragstart = function(ev) {
     ev.dataTransfer.setData("text/plain", ev.target.id);
@@ -1165,6 +1188,29 @@ var
     for (var i in w2ui.main_sidebar.nodes) nd.push(w2ui.main_sidebar.nodes[i].id);
     w2ui.main_sidebar.remove.apply(w2ui.main_sidebar, nd);
   },
+
+  /***** session *****/
+  save_session = function() {
+    window.sessionStorage.setItem('expanded', JSON.stringify(g.expanded));
+    window.sessionStorage.setItem('open', JSON.stringify(g.open));
+  },
+
+  load_key = function(key) {
+    var val = window.sessionStorage.getItem(key);
+    if (val == null) {
+      return {};
+    }
+    else {
+      return JSON.parse(val);
+    }
+  },
+
+  load_session = function() {
+    g.expanded = load_key('expanded');
+    g.open = load_key('open');
+ },
+
+  /***** helpers *****/
 
   ajax_fail = function(xhr, textStatus, errorThrown) {
     show_error('Unable to communicate with server: ' + textStatus);
