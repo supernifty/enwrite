@@ -185,7 +185,7 @@ def search():
     q = flask.request.form['q']
     if flask.request.form['project_id'] is None:
         raise query.QueryException("Required parameter project_id not provided")
-    return flask.jsonify(documents=query.summary(query.search(db(), authenticator.user_id(flask.session), project_id, q)))
+    return flask.jsonify(q=q, documents=query.summary(query.search(db(), authenticator.user_id(flask.session), project_id, q)))
 
 @app.route("/render/latex", methods=['POST'])
 def render():

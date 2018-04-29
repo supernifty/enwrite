@@ -77,7 +77,7 @@ def search(db, user_id, project_id, q):
   #result = db.query(model.Document).filter(model.Document.project == project, sqlalchemy.or_(model.Document.name.contains(q), model.Document.content.contains(q)))
 
   # using fts
-  result = db.query(model.Document).filter(model.Document.project == project, model.Document.__ts_vector__.match(q, postgresql_regconfig='english'))
+  result = db.query(model.Document).filter(model.Document.project == project, model.Document.__ts_vector__.op('@@')(sqlalchemy.sql.func.plainto_tsquery(q)))
 
   return result
 

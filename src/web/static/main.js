@@ -260,7 +260,7 @@ var
       g.document_target = 'search';
       current = g.tab_cache['tab_search'].documents;
       var content = '<div>' +
-        current.length + ' matching document(s) found.' +
+        current.length + ' document(s) matched query "' + escape_html(g.tab_cache['tab_search'].q) + '"' +
         '<ul>';
       for (var document of current) {
         content += '<li><a href="#" onclick="open_document(\'' + document.id + '\'); return false">' + document.name + '</a></li>';
@@ -832,7 +832,7 @@ var
     if (existing == null) {
       w2ui.main_layout_main_tabs.add({ id: target_id, text: 'Search', closable: true });
     }
-    g.tab_cache[target_id] = { 'document_type': 'search', 'documents': data.documents, 'unsaved': false };
+    g.tab_cache[target_id] = { 'document_type': 'search', 'documents': data.documents, 'unsaved': false, 'q': data.q };
     w2ui.main_layout_main_tabs.click(target_id); // select tab to display content
   },
 
