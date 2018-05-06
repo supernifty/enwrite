@@ -7,7 +7,8 @@ var
     'previewing_document': false,
     'expanded': {}, // currently expanded nodes
     'open': {}, // currently open documents
-    'project_show_documents': false
+    'project_show_documents': false,
+    'user_settings': {}
   },
 
   ENTITY_MAP = {
@@ -23,6 +24,7 @@ var
 
   MAX_SUMMARY = 1024,
   MAX_TITLE = 40,
+  AUTOSAVE_TIMER = 5000,
 
   init = function() {
     // markdown renderer
@@ -73,6 +75,7 @@ var
             { type: 'break', id: 'menu_right' },
             { type: 'button', id: 'menu_about', text: 'About' },
             { type: 'menu', id: 'menu_user', text: 'Loading...', icon: 'fa-star', items: [ 
+                { text: 'Loading...', id: 'menu_autosave', img: 'fas fa-times' }, 
                 { text: 'Logout', id: 'logout', img: 'icon-page' }, 
             ] }
         ],
@@ -109,9 +112,8 @@ var
     })
     );
 
-    get_projects();
-
     load_session();
+    get_projects();
   },
 
   add_attachment = function() {
@@ -227,7 +229,7 @@ var
       if (g.document_target != ev.target.substr(4)) { // changed selection 
         $("#editable_content").off('change keyup paste mouseup', content_changed);
   
-        // save changes to old tab
+        // save changes to old tab (to local cache)
         var current;
         if (g.document_target != null) {
           current = g.tab_cache['tab_' + g.document_target];
@@ -284,6 +286,24 @@ var
       w2ui.main_layout_main_tabs.get('tab_' + g.document_target).text = escape_html(max_length(current.name, MAX_TITLE)) + ' *';
       w2ui.main_layout_main_tabs.refresh();
     }
+    if (g.user_settings.autosave) {
+      if (g.autosave_timer != undefined) {
+        clearTimeout(g.autosave_timer); // restart existing timer
+      }
+      g.autosave_timer = setTimeout(autosave_all, AUTOSAVE_TIMER);
+    }
+  },
+
+  autosave_all = function() {
+    set_status('Autosaving...');
+    if (g.queue.length > 0) {
+      set_status('Autosave not performed. Busy.')
+      g.autosave_timer = setTimeout(autosave_all, AUTOSAVE_TIMER);
+    }
+    else {
+      save_all();
+    }
+    g.autosave_timer = undefined;
   },
 
   toggle_document_view = function() {
@@ -475,9 +495,25 @@ var
       case "menu_document:save_all": return save_all();
       case "menu_about": location.href = "/about"; return true;
       case "menu_user": return true;
+      case "menu_user:menu_autosave": return toggle_autosave();
       case "menu_user:logout": return logout();
     }
     w2alert('Unexpected command: ' + ev.target);
+  },    
+
+  show_autosave = function() {
+    if (g.user_settings.autosave) {
+      w2ui.main_toolbar.set('menu_user:menu_autosave', { text: 'Autosave On', id: 'menu_autosave', img: 'fas fa-check-circle'});
+    }
+    else {
+      w2ui.main_toolbar.set('menu_user:menu_autosave', { text: 'Autosave Off', id: 'menu_autosave', img: 'fas fa-times'});
+    }
+  }, 
+
+  toggle_autosave = function() {
+    g.user_settings.autosave = !(g.user_settings.autosave);
+    save_session();
+    show_autosave();
   },
 
   logout = function() {
@@ -633,6 +669,7 @@ var
 
   show_projects = function(data) {
     w2ui.main_toolbar.set('menu_user', { text: 'Logged in as ' + escape_html(data.username) });
+    show_autosave();
     remove_sidebar_nodes();
     for (project in data.projects) {
       w2ui.main_sidebar.add({id: 'project_' + data.projects[project].id, text: escape_html(data.projects[project].name), icon: 'fas fa-book', group: false, expanded: false});
@@ -847,6 +884,10 @@ var
     }
   },
 
+  save_to_queue = function(tab) {
+    g.queue.push(function () { save_document(tab.substr(4), run_queue) });
+  },
+
   save_all = function() {
     var ok = true;
     if (g.queue.length > 0) {
@@ -862,7 +903,7 @@ var
             g.queue.push(function () { save_current_document(run_queue) });
           }
           else { // is not current document
-            g.queue.push(function () { save_document(tab.substr(4), run_queue) });
+            save_to_queue(tab);
           }
         }
       }
@@ -898,13 +939,16 @@ var
     if (g.document_target == "search") {
       return;
     }
+    
+    // update the cache - used for deciding later if the document has changed
+    g.tab_cache['tab_' + g.document_target].content = $('#editable_content').val();
 
     $.ajax({
       type: "POST",
       url: '/set/document_s', 
       data: {
         id: g.documents[g.document_target].document.id,
-        content: $('#editable_content').val(),
+        content: g.tab_cache['tab_' + g.document_target].content,
         project_id: g.project_id
       }})
       .done(saved_document(g.document_target, callback))
@@ -1193,6 +1237,7 @@ var
   save_session = function() {
     window.sessionStorage.setItem('expanded', JSON.stringify(g.expanded));
     window.sessionStorage.setItem('open', JSON.stringify(g.open));
+    window.sessionStorage.setItem('user', JSON.stringify(g.user_settings));
   },
 
   load_key = function(key) {
@@ -1208,6 +1253,10 @@ var
   load_session = function() {
     g.expanded = load_key('expanded');
     g.open = load_key('open');
+    g.user_settings = load_key('user');
+    if (!('autosave' in g.user_settings)) {
+      g.user_settings.autosave = true;
+    }
  },
 
   /***** helpers *****/
