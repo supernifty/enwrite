@@ -350,7 +350,8 @@ var
 
   close_tab = function(ev) {
     // check saved
-    var current = g.tab_cache['tab_' + g.document_target];
+    var target = ev.target.substr(4),
+      current = g.tab_cache['tab_' + target];
     if (current.unsaved == true) {
       if (!confirm('This document has unsaved changed. Are you sure?')) {
         ev.preventDefault();
@@ -359,17 +360,20 @@ var
     }
     
     // clear session
-    delete g.open[g.document_target];
+    delete g.open[target];
     save_session();
 
     // clear cache
     delete g.tab_cache[ev.target];
     w2ui.main_layout.content('main', '');
-    g.document_target = null;
 
-    // select another tab
-    if (Object.keys(g.tab_cache).length > 0) {
-      w2ui.main_layout_main_tabs.click(Object.keys(g.tab_cache)[0]); // select existing tab
+    if (g.document_target == target) {
+      g.document_target = null;
+
+      // select another tab
+      if (Object.keys(g.tab_cache).length > 0) {
+        w2ui.main_layout_main_tabs.click(Object.keys(g.tab_cache)[0]); // select existing tab
+      }
     }
   },
 
