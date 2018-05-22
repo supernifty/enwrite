@@ -116,6 +116,9 @@ class Document(Base):
     '''
     return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'content': self.content, 'renderer': self.renderer, 'updated': self.updated, 'attachments': [item.detail() for item in self.document_attachments]}
 
+  def export(self):
+    return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'content': self.content, 'renderer': self.renderer, 'updated': self.updated, 'attachments': [item.detail() for item in self.document_attachments], 'parent_id': self.parent_id, 'predecessor_id': self.predecessor_id}
+
 class Attachment(Base):
   __tablename__ = 'attachment'
 

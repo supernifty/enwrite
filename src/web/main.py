@@ -3,11 +3,14 @@
   main application defines available views
 '''
 
+import base64
 import datetime
 import flask
+import io
 import json
 import mimetypes
 import os
+import zipfile
 
 import sqlalchemy
 import flask_sqlalchemy
@@ -31,6 +34,13 @@ else:
 
 # database
 _db_session = None
+
+class JSONEncoder(json.JSONEncoder):
+  def default(self, o):
+    if isinstance(o, datetime.datetime):
+      return o.isoformat()
+
+    return json.JSONEncoder.default(self, o)
 
 def db():
     global _db_session
@@ -177,6 +187,28 @@ def set_data(category):
         return flask.jsonify(status="error", message=ex.message)
 
     return flask.jsonify(status="error", message="Unrecognized command {}".format(category))
+
+# export a project
+@app.route("/export/<project_id>/", methods=['GET'])
+def export_project(project_id):
+  zipped_data = io.BytesIO()
+  zipped = zipfile.ZipFile(zipped_data, mode="w")
+  db_data = json.dumps(query.export_project(db(), authenticator.user_id(flask.session), project_id), cls=JSONEncoder)
+  zipped.writestr("db.json", db_data)
+  for attachment in query.attachments(db(), authenticator.user_id(flask.session), project_id):
+    zipped.write(attachment['filename'], attachment['id'])
+  zipped.close()
+  zipped_data.seek(0)
+  return flask.send_file(zipped_data, attachment_filename='nifty.zip', as_attachment=True, mimetype='application/zip')
+
+@app.route("/import", methods=['POST'])
+def import_project():
+  req = json.loads(flask.request.form['request'])
+  decoded = io.BytesIO(base64.b64decode(req['record']['file'][0]["content"]))
+  zipped = zipfile.ZipFile(decoded) # TODO limit to 1 file
+  db_data = json.loads(zipped.open('db.json').read())
+  query.import_project(db(), authenticator.user_id(flask.session), req['record']['name'], db_data, zipped)
+  return flask.jsonify(status="success")
 
 # search
 @app.route("/search", methods=['POST'])

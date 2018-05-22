@@ -1,5 +1,6 @@
 
 import base64
+import collections
 import datetime
 import os
 
@@ -146,6 +147,22 @@ def children(db, folder):
 
   return result
 
+def export_project(db, user_id, project_id):
+  '''
+    return all the info needed to import data
+  '''
+  user = db.query(model.User).filter(model.User.id == user_id).first()
+  if user is None:
+    raise QueryException("Authentication failed")
+  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
+  if project is None:
+    raise QueryException("Invalid project")
+
+  return { 
+    'documents': [document.export() for document in db.query(model.Document).filter(model.Document.project == project)]
+  }
+  
+
 # setters
 def find_or_add_user(db, email):
   user = db.query(model.User).filter(model.User.email == email).one_or_none()
@@ -165,6 +182,54 @@ def add_project(db, user_id, name, renderer):
   project = model.Project(name=name, renderer=renderer, owner=user)
   db.add(project)
   db.commit()
+
+def import_project(db, user_id, name, data, attachment_data):
+  user = db.query(model.User).filter(model.User.id == user_id).first()
+  if user is None:
+    raise QueryException("Authentication failed")
+
+  # for attachments
+  root = os.path.abspath(os.path.join(config.ASSETS, user_id, "attachments"))
+  if not os.path.exists(root):
+    os.makedirs(root)
+ 
+  project = model.Project(name=name, renderer='Markdown', owner=user) # renderer
+  db.add(project)
+  id_map = {}
+  ids_added = set()
+  queue = [x for x in data['documents']]
+  last_added = 0
+  stats = {'documents': 0, 'attachments': 0}
+  while len(queue) > 0:
+    item = queue.pop(0)
+    if item['id'] not in id_map: 
+      id_map[item['id']] = model.generate_id()
+    if (item['parent_id'] is None or item['parent_id'] in ids_added) and (item['predecessor_id'] is None or item['predecessor_id'] in ids_added):
+      document = model.Document(project=project, id=id_map.get(item['id']), name=item['name'], parent_id=id_map.get(item['parent_id']), predecessor_id=id_map.get(item['predecessor_id']), document_type=item['document_type'], renderer=item['renderer'], content=item['content'])
+      db.add(document)
+      stats['documents'] += 1
+      ids_added.add(item['id'])
+      last_added = 0
+      for attachment in item['attachments']:
+        new_attachment_id = model.generate_id()
+        # extract and save zipped file to new id
+        target_filename = os.path.join(root, new_attachment_id)
+        file_data = attachment_data.open(attachment['id'], 'r').read()
+        with open(target_filename, "wb") as fh:
+          fh.write(file_data)
+
+        new_attachment = model.Attachment(id=new_attachment_id, project=project, document=document, name=attachment["name"], size=len(file_data), location="server")
+        db.add(new_attachment)
+ 
+        stats['attachments'] += 1
+    else:
+      queue.append(item)
+      last_added += 1
+      if last_added > 2 * len(queue):
+        raise QueryException('Circular document definition')
+
+  db.commit()
+  return stats
 
 def add_document(db, user_id, project_id, document_type, name, parent_id, predecessor_id):
   user = db.query(model.User).filter(model.User.id == user_id).first()
@@ -275,7 +340,20 @@ def attachment(db, user_id, project_id, attachment_id):
   path = os.path.abspath(os.path.join(config.ASSETS, user_id, "attachments", attachment.id))
   
   return {'filename': path, 'name': attachment.name}
-  
+
+def attachments(db, user_id, project_id):
+  user = db.query(model.User).filter(model.User.id == user_id).first()
+  if user is None:
+    raise QueryException("Authentication failed")
+  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
+  if project is None:
+    raise QueryException("Invalid project")
+
+  result = []
+  for attachment in db.query(model.Attachment).filter(model.Attachment.project_id == project_id):
+    path = os.path.abspath(os.path.join(config.ASSETS, user_id, "attachments", attachment.id))
+    result.append({'filename': path, 'name': attachment.name, 'id': attachment.id})
+  return result
  
 def update_document(db, user_id, project_id, document_id, content):
   user = db.query(model.User).filter(model.User.id == user_id).first()
@@ -358,6 +436,14 @@ def delete_project(db, user_id, project_id):
   project = db.query(model.Project).filter(model.Project.id == project_id, model.Project.owner == user).first()
   if project is None:
     raise QueryException("Invalid project")
+
+  # delete all asset files
+  for attachment in db.query(model.Attachment).filter(model.Attachment.project_id == project_id):
+    filename = os.path.abspath(os.path.join(config.ASSETS, user_id, "attachments", attachment.id))
+    os.remove(filename)
+
+  db.query(model.Attachment).filter(model.Attachment.project_id == project_id).delete()
+  db.query(model.Document).filter(model.Document.project_id == project_id).delete()
   db.delete(project)
   db.commit()
 

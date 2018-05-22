@@ -68,7 +68,8 @@ var
             },
             { type: 'break' },
             { type: 'menu', id: 'menu_file', caption: 'Project', img: 'icon-folder', items: [
-                    { text: 'New Project...', id: 'add_project', icon: 'fas fa-book' } 
+                    { text: 'New Project...', id: 'add_project', icon: 'fas fa-book' },
+                    { text: 'Import Project...', id: 'import_project', icon: 'fas fa-book' } 
                 ]
             },
             { type: 'spacer', id: 'menu_last' },
@@ -487,6 +488,8 @@ var
     switch (ev.target) {
       case "menu_file": return true;
       case "menu_file:add_project": return add_project();
+      case "menu_file:import_project": return import_project();
+      case "menu_file:export_project": return export_project();
       case "menu_file:close_project": return close_project(); 
       case "menu_file:delete_project": return delete_project(); 
       case "menu_add": return true;
@@ -534,6 +537,8 @@ var
 
   update_project_menu = function() {
     submenu = w2ui.main_toolbar.get('menu_file');    
+    submenu.items = remove_by_id(submenu.items, "separate_project");
+    submenu.items = remove_by_id(submenu.items, "export_project");
     submenu.items = remove_by_id(submenu.items, "close_project");
     submenu.items = remove_by_id(submenu.items, "delete_project");
     w2ui.main_toolbar.remove('menu_add');
@@ -545,6 +550,11 @@ var
   },
 
   /* project */
+
+  export_project = function() {
+    window.location = '/export/' + g.project_id + '/';
+    set_status('Exported project "' + g.project_name + '".');
+  },
 
   close_project = function() {
     // anything unsaved?
@@ -586,6 +596,8 @@ var
 
   deleted_project = function(data) {
     if (data.status == 'success') {
+      g.unsaved_count = 0;
+      close_project();
       update_project_menu();
       set_status('Deleted project "' + g.project_name + '"', true);
     }
@@ -663,6 +675,76 @@ var
     });
   },
 
+  import_project = function() {
+    if (!w2ui.import_project) {
+        $().w2form({
+            name: 'import_project',
+            style: 'border: 0px; background-color: transparent;',
+            url: '/import',
+            formHTML: 
+                '<div class="w2ui-page page-0">'+
+                '    <div class="w2ui-field">'+
+                '        <label>Import as:</label>'+
+                '        <div>'+
+                '           <input name="name" id="name" style="width: 400px"/>'+
+                '        </div>'+
+                '    </div>'+
+                '    <div class="w2ui-field">'+
+                '        <label>File:</label>'+
+                '        <div>'+
+                '           <input name="file" id="file" style="width: 400px"/>'+
+                '        </div>'+
+                '    </div>'+
+                '</div>'+
+                '<div class="w2ui-buttons">'+
+                '    <button class="w2ui-btn" name="reset">Reset</button>'+
+                '    <button class="w2ui-btn" name="ok">OK</button>'+
+                '</div>',
+            fields: [
+                { field: 'name', type: 'text', required: true },
+                { field: 'file', type: 'file', required: true }
+            ],
+            record: { 
+                name: 'Imported Project',
+                project_id: g.project_id
+            },
+            actions: {
+                "ok": function () { 
+                  this.save(function (data) {
+                    if (data.status == 'success') {
+                        get_projects();
+                        $().w2popup('close');
+                    }
+                  }) 
+                },
+                "reset": function () { this.clear(); }
+            }
+        });
+    }
+    $().w2popup('open', {
+        title   : 'Import project',
+        body    : '<div id="form" style="width: 100%; height: 100%;"></div>',
+        style   : 'padding: 15px 0px 0px 0px',
+        width   : 500,
+        height  : 300, 
+        showMax : true,
+        onToggle: function (event) {
+            $(w2ui.import_project.box).hide();
+            event.onComplete = function () {
+                $(w2ui.import_project.box).show();
+                w2ui.import_project.resize();
+            }
+        },
+        onOpen: function (event) {
+            event.onComplete = function () {
+                // specifying an onOpen handler instead is equivalent to specifying an onBeforeOpen handler, which would make this code execute too early and hence not deliver.
+                $('#w2ui-popup #form').w2render('import_project');
+            }
+        }
+    });
+ 
+  },
+
   get_projects = function() {
     $.ajax({ 
       url: "/get/projects"
@@ -685,7 +767,9 @@ var
   },
 
   open_project = function(id, name) { // note that name is already escaped
-    // toolbar
+    // add additional toolbar options
+    w2ui.main_toolbar.get('menu_file').items.push({ text: '--', id: 'separate_project' }); 
+    w2ui.main_toolbar.get('menu_file').items.push({ text: 'Export Project ' + name, id: 'export_project', icon: 'fas fa-book'}); 
     w2ui.main_toolbar.get('menu_file').items.push({ text: 'Close Project ' + name, id: 'close_project', icon: 'fas fa-book'}); 
     w2ui.main_toolbar.get('menu_file').items.push({ text: 'Delete Project ' + name, id: 'delete_project', icon: 'fas fa-book'}); 
     w2ui.main_toolbar.insert('menu_last', { type: 'menu', text: 'Add', id: 'menu_add', icon: 'fas fa-plus', items: [
