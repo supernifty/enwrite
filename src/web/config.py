@@ -10,3 +10,5 @@ PANDOC='docker run --rm --mount type=bind,source={root},target=/source jagregory
 
 MAX_ATTACHMENT_SIZE=10e6
 MAX_FREE_USER_STORAGE=50e6
+
+EMAIL=False

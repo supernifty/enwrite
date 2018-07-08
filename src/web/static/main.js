@@ -89,7 +89,10 @@ var
       nodes: [ { id: 'placeholder', text: 'Loading...', icon: 'fas fa-spinner' } ],
       onClick: function(ev) {
         if (ev.target && ev.target.startsWith("project_")) {
-          open_project(ev.target.substr(8), ev.node.text);
+          open_project(ev.target.substr(8), ev.node.text, ev.node.access);
+        }
+        if (ev.target && ev.target.startsWith("shared_")) {
+          open_project(ev.target.substr(7), ev.node.text, ev.node.access);
         }
         if (ev.target && ev.target.startsWith('document_')) {
           g.sidebar_target = ev.target;
@@ -317,9 +320,14 @@ var
   },
 
   edit_document = function() {
+    if (g.project_access != 'w') {
+      w2alert('You do not have permission to edit this document');
+      return;
+    }
     $('#editable_content').show();
     $('#preview_content').hide();
     g.previewing_document = false;
+    // TODO show edit controls
   },
 
   preview_document = function() {
@@ -343,6 +351,7 @@ var
     $('#editable_content').hide();
     $('#preview_content').show();
     g.previewing_document = true;
+    // TODO hide edit controls
   },
 
   rendered = function(data) {
@@ -492,6 +501,7 @@ var
       case "menu_file:export_project": return export_project();
       case "menu_file:close_project": return close_project(); 
       case "menu_file:delete_project": return delete_project(); 
+      case "menu_file:share_project": return share_project(); 
       case "menu_add": return true;
       case "menu_add:add_folder": return add_folder();
       case "menu_add:add_document": return add_document();
@@ -604,6 +614,72 @@ var
     else {
       show_error(data.message);
     }
+  },
+
+  share_project = function() {
+        if (w2ui.share_project) {
+        $().w2destroy('share_project');
+      }
+      $().w2form({
+          name: 'share_project',
+          style: 'border: 0px; background-color: transparent;',
+          url: '/share_p',
+          formHTML: 
+              '<div class="w2ui-page page-0">'+
+              '    <div class="w2ui-field">'+
+              '        <label>Access type:</label>'+
+              '        <div>'+
+              '            <select name="access"/>'+
+              '        </div>'+
+              '    </div>'+
+              '</div>'+
+              '<div class="w2ui-buttons">'+
+              '    <button class="w2ui-btn" name="reset">Reset</button>'+
+              '    <button class="w2ui-btn" name="ok">OK</button>'+
+              '</div>',
+          fields: [
+              { field: 'access', type: 'select', required: true, options: { items: [{id: 'r', text: 'View only'}, {id: 'c', text: 'Comment only'}, {id: 'w', text: 'Full access'}] } }
+          ],
+          record: {
+              access: 'r',
+              project_id: g.project_id
+          },
+          actions: {
+              "ok": function () { 
+                this.save(function (data) {
+                  if (data.status == 'success') {
+                      $().w2popup('close');
+                      w2alert('Share the following single-use URL with your collaborator: <a style="color: #ffffff" id="share_url" href="/access/' + data.token + '">' + new URL('/access/' + data.token, window.location.href).href + '</a><div><button class="w2ui-btn" onclick="copy_clipboard(); return false">Copy to clipboard</button></div>');
+                  }
+                  else {
+                      show_error(data.message);
+                  }
+                }) 
+              },
+              "reset": function () { this.clear(); }
+          }
+      });
+      $().w2popup('open', {
+        title   : 'Share project',
+        body    : '<div id="form" style="width: 100%; height: 100%;"></div>',
+        style   : 'padding: 15px 0px 0px 0px',
+        width   : 500,
+        height  : 300, 
+        showMax : true,
+        onToggle: function (event) {
+            $(w2ui.share_project.box).hide();
+            event.onComplete = function () {
+                $(w2ui.share_project.box).show();
+                w2ui.share_project.resize();
+            }
+        },
+        onOpen: function (event) {
+            event.onComplete = function () {
+                // specifying an onOpen handler instead is equivalent to specifying an onBeforeOpen handler, which would make this code execute too early and hence not deliver.
+                $('#w2ui-popup #form').w2render('share_project');
+            }
+        }
+      });
   },
 
   add_project = function() {
@@ -757,21 +833,34 @@ var
     w2ui.main_toolbar.set('menu_user', { text: 'Logged in as ' + escape_html(data.username) });
     show_autosave();
     remove_sidebar_nodes();
+    var projects = [];
     for (project in data.projects) {
-      w2ui.main_sidebar.add({id: 'project_' + data.projects[project].id, text: escape_html(data.projects[project].name), icon: 'fas fa-book', group: false, expanded: false});
+      projects.push({id: 'project_' + data.projects[project].id, text: escape_html(data.projects[project].name), icon: 'fas fa-book', group: false, expanded: false, access: 'w'});
     }
     if (data.projects.length == 0) {
-      w2ui.main_sidebar.add({id: 'placeholder', text: 'No projects'});
+      projects.push({id: 'placeholder', text: 'No projects'});
     }
+    w2ui.main_sidebar.add({ id: 'group_project', text: 'My Projects', img: 'icon-folder', expanded: true, group: true, nodes: projects})
+
+    shared = []
+    for (project in data.shared) {
+      shared.push({id: 'shared_' + data.shared[project].id, text: escape_html(data.shared[project].name), icon: 'fas fa-book', group: false, expanded: false, access: data.shared[project].access});
+    }
+    if (data.shared.length == 0) {
+      shared.push({id: 'shared_placeholder', text: 'No projects'});
+    }
+    w2ui.main_sidebar.add({ id: 'group_shared', text: 'Shared with me', img: 'icon-folder', expanded: true, group: true, nodes: shared})
+
     w2ui.main_sidebar.refresh();
   },
 
-  open_project = function(id, name) { // note that name is already escaped
+  open_project = function(id, name, access) { // note that name is already escaped
     // add additional toolbar options
     w2ui.main_toolbar.get('menu_file').items.push({ text: '--', id: 'separate_project' }); 
     w2ui.main_toolbar.get('menu_file').items.push({ text: 'Export Project ' + name, id: 'export_project', icon: 'fas fa-book'}); 
     w2ui.main_toolbar.get('menu_file').items.push({ text: 'Close Project ' + name, id: 'close_project', icon: 'fas fa-book'}); 
     w2ui.main_toolbar.get('menu_file').items.push({ text: 'Delete Project ' + name, id: 'delete_project', icon: 'fas fa-book'}); 
+    w2ui.main_toolbar.get('menu_file').items.push({ text: 'Share Project ' + name, id: 'share_project', icon: 'fas fa-book'}); 
     w2ui.main_toolbar.insert('menu_last', { type: 'menu', text: 'Add', id: 'menu_add', icon: 'fas fa-plus', items: [
       { text: 'New Folder', id: 'add_folder', icon: 'fas fa-folder'},
       { text: 'New Document', id: 'add_document', icon: 'fas fa-file'}
@@ -797,11 +886,12 @@ var
     w2ui.main_sidebar.menu = [
       {id: 'sidebar_open_item', text: 'Open item', icon: 'fas fa-folder-open'},
       {id: 'sidebar_delete_item', text: 'Delete item', icon: 'fas fa-times'},
-      {id: 'sidebar_edit_item', text: 'Properties', icon: 'fas fa-edit'}
+      {id: 'sidebar_edit_item', text: 'Properties...', icon: 'fas fa-edit'},
     ];
 
     g.project_id = id;
     g.project_name = name;
+    g.project_access = access;
     g.unsaved_count = 0;
     setTimeout(load_project, 10);
   },
@@ -1045,21 +1135,26 @@ var
 
   saved_document = function(document_target, callback) {
     return function(data) {
-      set_status('Saved.');
-      var current = g.tab_cache['tab_' + document_target];
-      if (current.unsaved == true) {
-        current.unsaved = false;
-        current.updated = Date.now();
-        g.unsaved_count -= 1;
-        set_status(g.unsaved_count + ' unsaved document(s)');
-        w2ui.main_layout_main_tabs.get('tab_' + document_target).text = escape_html(max_length(current.name, MAX_TITLE)); // remove unsaved mark on title
-        w2ui.main_layout_main_tabs.refresh();
-        if (g.document_target == document_target) { // saved current document
-          update_document_details();
+      if (data.status == 'success') {
+        set_status('Saved.');
+        var current = g.tab_cache['tab_' + document_target];
+        if (current.unsaved == true) {
+          current.unsaved = false;
+          current.updated = Date.now();
+          g.unsaved_count -= 1;
+          set_status(g.unsaved_count + ' unsaved document(s)');
+          w2ui.main_layout_main_tabs.get('tab_' + document_target).text = escape_html(max_length(current.name, MAX_TITLE)); // remove unsaved mark on title
+          w2ui.main_layout_main_tabs.refresh();
+          if (g.document_target == document_target) { // saved current document
+            update_document_details();
+          }
+        }
+        if (callback != undefined) {
+          callback();
         }
       }
-      if (callback != undefined) {
-        callback();
+      else { // error
+        set_status(data.status + ': ' + data.message);
       }
     }
   },
@@ -1371,7 +1466,16 @@ var
     else {
       return s
     }
-  }
+  },
+
+  copy_clipboard = function() {
+    var value = document.getElementById('share_url').href,
+      $temp = $("<input>");
+    $("body").append($temp);
+    $temp.val(value).select();
+    document.execCommand("copy");
+    $temp.remove();
+  },
 
   escape_html = function (string) {
     return String(string).replace(/[&<>"'`=\/]/g, function (s) {

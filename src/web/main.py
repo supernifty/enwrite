@@ -6,6 +6,7 @@
 import base64
 import datetime
 import flask
+import flask_mail
 import io
 import json
 import mimetypes
@@ -26,6 +27,8 @@ app = flask.Flask(__name__, template_folder='templates')
 app.wsgi_app = proxy.ReverseProxied(app.wsgi_app)
 app.config.from_pyfile('config.py')
 app.secret_key = 'ducks in space'
+
+mail = flask_mail.Mail(app)
 
 if config.AUTHENTICATE:
     authenticator = auth.GoogleAuth(app)
@@ -84,14 +87,20 @@ def get_data(category):
         return None # shouldn't happen
 
     try:
+        # project level
         if category == 'projects':
-           return flask.jsonify(username=authenticator.username(flask.session), projects=query.summary(query.projects(db(), authenticator.user_id(flask.session)).all())) 
+           return flask.jsonify(
+               username=authenticator.username(flask.session), 
+               projects=query.summary(query.projects(db(), authenticator.user_id(flask.session)).all()),
+               shared=query.summary(query.shared_projects(db(), authenticator.user_id(flask.session))) 
+           )
 
         if category == 'documents':
            if flask.request.args.get('project_id') is None:
                raise query.QueryException("Required parameter project_id not provided")
            return flask.jsonify(username=authenticator.username(flask.session), documents=query.documents(db(), authenticator.user_id(flask.session), flask.request.args.get('project_id')))
 
+        # document level
         if category == 'document':
            if flask.request.args.get('project_id') is None:
                raise query.QueryException("Required parameter project_id not provided")
@@ -209,6 +218,43 @@ def import_project():
   db_data = json.loads(zipped.open('db.json').read())
   query.import_project(db(), authenticator.user_id(flask.session), req['record']['name'], db_data, zipped)
   return flask.jsonify(status="success")
+
+# document sharing
+@app.route("/share_p", methods=['POST'])
+def share_p():
+    '''
+      generates a token that can be used to grant access to a project
+    '''
+    # request fields: target, access, project_id, document_id
+    req = json.loads(flask.request.form['request'])
+
+    try:
+      # create a token for the given document and email the recipient
+      if req['record']['project_id'] is None:
+        raise query.QueryException("Required parameter project_id not provided")
+
+      result = query.add_token(db(), authenticator.user_id(flask.session), req['record']['project_id'], req['record']['access'], document_id=None)
+
+      # send email
+      if config.EMAIL:
+        # not yet implemented
+        msg = flask_mail.Message("Hello", sender="robot@supernifty.org", recipients=[req['record']['target']])
+        mail.send(msg)
+
+      return flask.jsonify(status="success", token=result)
+
+    except query.QueryException as ex:
+        return flask.jsonify(status="error", message=ex.message)
+
+@app.route("/access/<token>/", methods=['GET'])
+def access(token):
+    '''
+        use a token to accept access to a document
+    '''
+    # apply token and redirect
+    result = query.apply_token(db(), authenticator.user_id(flask.session), token)
+    if result:
+        return flask.redirect(flask.url_for('home'))
 
 # search
 @app.route("/search", methods=['POST'])

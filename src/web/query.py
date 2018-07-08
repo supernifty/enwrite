@@ -3,11 +3,16 @@ import base64
 import collections
 import datetime
 import os
+import uuid
 
 import sqlalchemy
 
 import config
 import model
+
+ACCESS_READ = 'r'
+ACCESS_COMMENT = 'c'
+ACCESS_WRITE = 'w'
 
 class QueryException(Exception):
   def __init__(self, message):
@@ -24,6 +29,28 @@ def detail(objects):
 def projects(db, user_id):
   return db.query(model.Project).filter(model.Project.owner_id == user_id)
 
+def shared_projects(db, user_id):
+  return [ project_user for project_user in db.query(model.ProjectUser).distinct(model.ProjectUser.project_id).filter(model.ProjectUser.user_id == user_id) ]
+
+def get_project_access(db, project_id, user_id, required_access):
+  '''
+    is owner or has access to project
+    returns (project, access)
+  '''
+  # does user own project?
+  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
+  if project is not None:
+    return (project, ACCESS_WRITE)
+
+  # does user have shared access to project?
+  project_user = db.query(model.ProjectUser).filter(model.ProjectUser.project_id == project_id).filter(model.ProjectUser.user_id == user_id).first()
+  if project_user is not None:
+    if project_user.access == ACCESS_READ and required_access in (ACCESS_COMMENT, ACCESS_WRITE) or project_user.access == ACCESS_COMMENT and required_access == ACCESS_WRITE:
+      raise QueryException("Insufficient access")
+    return (project_user.project, project_user.access)
+
+  raise QueryException("Invalid project")
+
 def documents(db, user_id, project_id):
   '''
     build a tree of items
@@ -31,9 +58,8 @@ def documents(db, user_id, project_id):
   user = db.query(model.User).filter(model.User.id == user_id).first()
   if user is None:
     raise QueryException("Authentication error")
-  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
-  if project is None:
-    raise QueryException("Invalid project")
+
+  project, access = get_project_access(db, project_id, user_id, ACCESS_READ)
 
   # aim to build children and nexts
   root = None
@@ -70,9 +96,7 @@ def search(db, user_id, project_id, q):
   user = db.query(model.User).filter(model.User.id == user_id).first()
   if user is None:
     raise QueryException("Authentication error")
-  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
-  if project is None:
-    raise QueryException("Invalid project")
+  project, access = get_project_access(db, project_id, user_id, ACCESS_READ)
   
   # not using fts
   #result = db.query(model.Document).filter(model.Document.project == project, sqlalchemy.or_(model.Document.name.contains(q), model.Document.content.contains(q)))
@@ -108,9 +132,8 @@ def document(db, user_id, project_id, document_id):
   user = db.query(model.User).filter(model.User.id == user_id).first()
   if user is None:
     raise QueryException("Authentication error")
-  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
-  if project is None:
-    raise QueryException("Invalid project")
+  project, access = get_project_access(db, project_id, user_id, ACCESS_READ)
+
   document = db.query(model.Document).filter((model.Document.id == document_id) & (model.Document.project_id == project_id)).first()
   if document is None:
     raise QueryException("Invalid document")
@@ -120,9 +143,8 @@ def folder(db, user_id, project_id, document_id):
   user = db.query(model.User).filter(model.User.id == user_id).first()
   if user is None:
     raise QueryException("Authentication error")
-  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
-  if project is None:
-    raise QueryException("Invalid project")
+  project, access = get_project_access(db, project_id, user_id, ACCESS_READ)
+
   document = db.query(model.Document).filter((model.Document.id == document_id) & (model.Document.project_id == project_id)).first()
   if document is None:
     raise QueryException("Invalid document")
@@ -154,9 +176,7 @@ def export_project(db, user_id, project_id):
   user = db.query(model.User).filter(model.User.id == user_id).first()
   if user is None:
     raise QueryException("Authentication failed")
-  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
-  if project is None:
-    raise QueryException("Invalid project")
+  project, access = get_project_access(db, project_id, user_id, ACCESS_READ)
 
   return { 
     'documents': [document.export() for document in db.query(model.Document).filter(model.Document.project == project)]
@@ -235,9 +255,8 @@ def add_document(db, user_id, project_id, document_type, name, parent_id, predec
   user = db.query(model.User).filter(model.User.id == user_id).first()
   if user is None:
     raise QueryException("Authentication failed")
-  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
-  if project is None:
-    raise QueryException("Invalid project")
+
+  project, access = get_project_access(db, project_id, user_id, ACCESS_WRITE)
 
   # initially use project renderer
   renderer = project.renderer
@@ -280,9 +299,7 @@ def add_attachments(db, user_id, project_id, document_id, attachments):
   if user is None:
     raise QueryException("Authentication failed")
 
-  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
-  if project is None:
-    raise QueryException("Invalid project")
+  project, access = get_project_access(db, project_id, user_id, ACCESS_WRITE)
 
   document = db.query(model.Document).filter((model.Document.id == document_id) & (model.Document.project_id == project_id)).first()
   if document is None:
@@ -329,9 +346,8 @@ def attachment(db, user_id, project_id, attachment_id):
   user = db.query(model.User).filter(model.User.id == user_id).first()
   if user is None:
     raise QueryException("Authentication failed")
-  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
-  if project is None:
-    raise QueryException("Invalid project")
+
+  project, access = get_project_access(db, project_id, user_id, ACCESS_READ)
   attachment = db.query(model.Attachment).filter((model.Attachment.id == attachment_id) & (model.Attachment.project_id == project_id)).first()
 
   if attachment is None:
@@ -345,9 +361,8 @@ def attachments(db, user_id, project_id):
   user = db.query(model.User).filter(model.User.id == user_id).first()
   if user is None:
     raise QueryException("Authentication failed")
-  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
-  if project is None:
-    raise QueryException("Invalid project")
+
+  project, access = get_project_access(db, project_id, user_id, ACCESS_READ)
 
   result = []
   for attachment in db.query(model.Attachment).filter(model.Attachment.project_id == project_id):
@@ -359,9 +374,9 @@ def update_document(db, user_id, project_id, document_id, content):
   user = db.query(model.User).filter(model.User.id == user_id).first()
   if user is None:
     raise QueryException("Authentication failed")
-  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
-  if project is None:
-    raise QueryException("Invalid project")
+
+  project, access = get_project_access(db, project_id, user_id, ACCESS_WRITE)
+
   document = db.query(model.Document).filter((model.Document.id == document_id) & (model.Document.project_id == project_id)).first()
   document.content = content
   document.updated = datetime.datetime.utcnow()
@@ -371,9 +386,9 @@ def update_document_properties(db, user_id, project_id, document_id, name, rende
   user = db.query(model.User).filter(model.User.id == user_id).first()
   if user is None:
     raise QueryException("Authentication failed")
-  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
-  if project is None:
-    raise QueryException("Invalid project")
+
+  project, access = get_project_access(db, project_id, user_id, ACCESS_WRITE)
+
   document = db.query(model.Document).filter((model.Document.id == document_id) & (model.Document.project_id == project_id)).first()
   document.name = name
   document.renderer = renderer
@@ -388,9 +403,7 @@ def move_document(db, user_id, project_id, document_id, target_document_id):
   if document_id == target_document_id:
     raise QueryException("Documents are the same")
 
-  project = db.query(model.Project).filter((model.Project.id == project_id) & (model.Project.owner_id == user_id)).first()
-  if project is None:
-    raise QueryException("Invalid project")
+  project, access = get_project_access(db, project_id, user_id, ACCESS_WRITE)
 
   document_to_move = db.query(model.Document).filter((model.Document.id == document_id) & (model.Document.project_id == project_id)).first()
 
@@ -486,3 +499,52 @@ def delete_attachment(db, user_id, project_id, attachment_id):
   db.delete(attachment)
   db.commit()
 
+def add_token(db, user_id, project_id, access, document_id=None ):
+  user = db.query(model.User).filter(model.User.id == user_id).first()
+  if user is None:
+    raise QueryException("Authentication failed")
+
+  project = db.query(model.Project).filter(model.Project.id == project_id, model.Project.owner == user).first()
+  if project is None:
+    raise QueryException("Invalid project")
+
+  if access not in ('c', 'r', 'w'):
+    raise QueryException("Invalid access type")
+
+  if document_id is None:
+    document = None
+  else:
+    document = db.query(model.Document).filter((model.Document.id == document_id) & (model.Document.project_id == project_id)).one_or_none()
+    if document is None:
+      raise QueryException("Invalid document")
+  
+  token = str(uuid.uuid4())
+  access_token = model.AccessToken(issuer=user, project=project, document=document, token=token, access=access)  
+  db.add(access_token)
+  db.commit()
+  return token
+
+def apply_token(db, user_id, token_id):
+  # user to be granted access
+  user = db.query(model.User).filter(model.User.id == user_id).first()
+  if user is None:
+    raise QueryException("Authentication failed")
+  
+  token = db.query(model.AccessToken).filter(model.AccessToken.token == token_id).first()
+  if token is None:
+    raise QueryException("Invalid access token: token does not exist or has already been redeemed.")
+
+  # TODO check for sharing with self
+  # TODO check for existing
+
+  if token.document is None:
+    # add access to project
+    user_access = model.ProjectUser(user=user, project=token.project, access=token.access)
+    db.add(user_access)
+  else: # document specific sharing
+    raise QueryException("Not implemented")
+
+  db.delete(token)
+  db.commit()
+  
+  return user_access

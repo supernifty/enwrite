@@ -63,7 +63,13 @@ class ProjectUser(Base):
   project_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey("project.id"), nullable=False)
   project = sqlalchemy.orm.relationship('Project', backref=sqlalchemy.orm.backref('project_users', lazy='dynamic'))
 
-  access = sqlalchemy.Column(sqlalchemy.String(8), nullable=False, default='readonly') # readonly, comment, write
+  access = sqlalchemy.Column(sqlalchemy.String(2), nullable=False, default='r') # (r)eadonly, (c)omment, (w)rite
+
+  def summary(self):
+    '''
+      returns Project details
+    '''
+    return {'id': self.project_id, 'name': self.project.name, 'renderer': self.project.renderer, 'created': self.created, 'access': self.access}
 
 # a tree of documents
 class Document(Base):
@@ -143,4 +149,27 @@ class Attachment(Base):
     '''
     return {'id': self.id, 'name': self.name, 'location': self.location, 'size': self.size}
 
+class AccessToken(Base):
+  '''
+    a token to create an entry on document user
+  '''
+  __tablename__ = 'access_token'
+  id = sqlalchemy.Column(sqlalchemy.String, primary_key=True, default=generate_id)
+  created = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.utcnow, nullable=False)
+  
+  # who issued it
+  issuer_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey("app_user.id"), nullable=False)
+  issuer = sqlalchemy.orm.relationship('User', backref=sqlalchemy.orm.backref('issuer_users', lazy='dynamic'))
+
+  # target document
+  document_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey("document.id"), nullable=True)
+  document = sqlalchemy.orm.relationship('Document', backref=sqlalchemy.orm.backref('token_documents', lazy='dynamic'))
+
+  # target project
+  project_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey("project.id"), nullable=False)
+  project = sqlalchemy.orm.relationship('Project', backref=sqlalchemy.orm.backref('token_projects', lazy='dynamic'))
+
+  # token providing access
+  token = sqlalchemy.Column(sqlalchemy.String, nullable=False)
+  access = sqlalchemy.Column(sqlalchemy.String(2), nullable=False, default='readonly') # r(eadonly), c(omment), w(rite)
 

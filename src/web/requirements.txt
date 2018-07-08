@@ -2,4 +2,5 @@ wheel
 Flask
 Flask-SQLAlchemy
 flask_oauthlib
+Flask-Mail
 psycopg2-binary
