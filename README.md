@@ -10,7 +10,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-NiftyWrite requires (postgres)[https://www.postgresql.org].
+NiftyWrite requires [postgres](https://www.postgresql.org).
 To create the database:
 ```
 createdb niftywrite
