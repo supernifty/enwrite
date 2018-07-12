@@ -76,6 +76,10 @@ ul {
   padding-left: 20px;
 }
 
+#preview_content p {
+  margin-bottom: 1em;
+}
+
 .child_outer {
     margin: 2px;
     overflow: hidden;
