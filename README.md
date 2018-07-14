@@ -1,20 +1,20 @@
-# Nwrite
+# Enwrite
 Manage writing a large body of work such as a thesis or book
 
 # Install
 ```
-git clone https://github.com/supernifty/nwrite
-cd nwrite/src/web
+git clone https://github.com/supernifty/enwrite
+cd enwrite/src/web
 cp config.py.template config.py
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-nwrite requires [postgres](https://www.postgresql.org).
+enwrite requires [postgres](https://www.postgresql.org).
 To create the database:
 ```
-createdb nwrite
+createdb enwrite
 ```
 
 The Latex renderer is executed via a Docker container.

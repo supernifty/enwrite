@@ -208,7 +208,7 @@ def export_project(project_id):
     zipped.write(attachment['filename'], attachment['id'])
   zipped.close()
   zipped_data.seek(0)
-  return flask.send_file(zipped_data, attachment_filename='nwrite.zip', as_attachment=True, mimetype='application/zip')
+  return flask.send_file(zipped_data, attachment_filename='enwrite.zip', as_attachment=True, mimetype='application/zip')
 
 @app.route("/import", methods=['POST'])
 def import_project():
