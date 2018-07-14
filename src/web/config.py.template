@@ -1,5 +1,5 @@
 
-SQLALCHEMY_DATABASE_URI="postgresql:///niftywrite"
+SQLALCHEMY_DATABASE_URI="postgresql:///nwrite"
 PORT=5000
 
 AUTHENTICATE=False

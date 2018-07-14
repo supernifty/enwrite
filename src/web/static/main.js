@@ -63,7 +63,7 @@ var
         items: [
             { type: 'html',  id: 'menu_root',
                 html: function (item) {
-                    return '<div class="banner"><a href="/">NiftyWrite</a></div>'
+                    return '<div class="banner"><a href="/">Nwrite</a></div>'
                 }
             },
             { type: 'break' },
