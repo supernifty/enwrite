@@ -375,10 +375,10 @@ var
 
     // clear cache
     delete g.tab_cache[ev.target];
-    w2ui.main_layout.content('main', '');
 
     if (g.document_target == target) {
       g.document_target = null;
+      w2ui.main_layout.content('main', '');
 
       // select another tab
       if (Object.keys(g.tab_cache).length > 0) {
