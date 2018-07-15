@@ -84,7 +84,7 @@ def home():
 @app.route("/get/<category>", methods=['GET'])
 def get_data(category):
     if not authenticator.is_auth(flask.session):
-        return None # shouldn't happen
+        return flask.jsonify(status="auth", message="User is not authenticated")
 
     try:
         # project level
@@ -136,7 +136,7 @@ def get_data(category):
 @app.route("/set/<category>", methods=['POST'])
 def set_data(category):
     if not authenticator.is_auth(flask.session):
-        return None # shouldn't happen
+        return flask.jsonify(status="auth", message="User is not authenticated")
 
     try:
         if category == 'project': # new project
@@ -200,6 +200,8 @@ def set_data(category):
 # export a project
 @app.route("/export/<project_id>/", methods=['GET'])
 def export_project(project_id):
+  if not authenticator.is_auth(flask.session):
+    return flask.jsonify(status="auth", message="User is not authenticated")
   zipped_data = io.BytesIO()
   zipped = zipfile.ZipFile(zipped_data, mode="w")
   db_data = json.dumps(query.export_project(db(), authenticator.user_id(flask.session), project_id), cls=JSONEncoder)
@@ -212,6 +214,9 @@ def export_project(project_id):
 
 @app.route("/import", methods=['POST'])
 def import_project():
+  if not authenticator.is_auth(flask.session):
+    return flask.jsonify(status="auth", message="User is not authenticated")
+
   req = json.loads(flask.request.form['request'])
   decoded = io.BytesIO(base64.b64decode(req['record']['file'][0]["content"]))
   zipped = zipfile.ZipFile(decoded) # TODO limit to 1 file
@@ -225,6 +230,9 @@ def share_p():
     '''
       generates a token that can be used to grant access to a project
     '''
+    if not authenticator.is_auth(flask.session):
+      return flask.jsonify(status="auth", message="User is not authenticated")
+
     # request fields: target, access, project_id, document_id
     req = json.loads(flask.request.form['request'])
 
@@ -251,6 +259,9 @@ def access(token):
     '''
         use a token to accept access to a document
     '''
+    if not authenticator.is_auth(flask.session):
+      return flask.jsonify(status="auth", message="User is not authenticated")
+
     # apply token and redirect
     result = query.apply_token(db(), authenticator.user_id(flask.session), token)
     if result:
@@ -259,6 +270,9 @@ def access(token):
 # search
 @app.route("/search", methods=['POST'])
 def search():
+    if not authenticator.is_auth(flask.session):
+        return flask.jsonify(status="auth", message="User is not authenticated")
+
     project_id = flask.request.form['project_id']
     q = flask.request.form['q']
     if flask.request.form['project_id'] is None:
@@ -268,7 +282,7 @@ def search():
 @app.route("/render/latex", methods=['POST'])
 def render():
     if not authenticator.is_auth(flask.session):
-        return None # shouldn't happen
+        return flask.jsonify(status="auth", message="User is not authenticated")
 
     content = flask.request.form['content']
     

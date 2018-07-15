@@ -276,7 +276,7 @@ var
       w2ui.main_layout.content('right', '');
     }
     else {
-      show_error('unrecognized document type ' + selected_document.document_type);
+      show_error('error', 'unrecognized document type ' + selected_document.document_type);
     }
   },
 
@@ -469,6 +469,10 @@ var
 
   show_document = function(target_id) {
     return function(data) {
+      if ('status' in data && data.status != 'success') {
+        show_error(data.status, data.message);
+        return;
+      }
       if (data.document.content == null) {
         set_status('Opened empty document');
       }
@@ -612,7 +616,7 @@ var
       set_status('Deleted project "' + g.project_name + '"', true);
     }
     else {
-      show_error(data.message);
+      show_error(data.status, data.message);
     }
   },
 
@@ -652,7 +656,7 @@ var
                       w2alert('Share the following single-use URL with your collaborator: <a style="color: #ffffff" id="share_url" href="/access/' + data.token + '">' + new URL('/access/' + data.token, window.location.href).href + '</a><div><button class="w2ui-btn" onclick="copy_clipboard(); return false">Copy to clipboard</button></div>');
                   }
                   else {
-                      show_error(data.message);
+                      show_error(data.status, data.message);
                   }
                 }) 
               },
@@ -995,7 +999,7 @@ var
       set_status('Deleted item.');
     }
     else {
-      show_error(data.message);
+      show_error(data.status, data.message);
     }
   },
 
@@ -1023,7 +1027,7 @@ var
       set_status('Deleted item.');
     }
     else {
-      show_error(data.message);
+      show_error(data.status, data.message);
     }
   },
 
@@ -1154,7 +1158,7 @@ var
         }
       }
       else { // error
-        set_status(data.status + ': ' + data.message);
+        show_error(data.status, data.message);
       }
     }
   },
@@ -1406,7 +1410,7 @@ var
       set_status('Document moved.');
     }
     else {
-      show_error(data.message);
+      show_error(data.status, data.message);
     }
   },
 
@@ -1445,11 +1449,19 @@ var
   /***** helpers *****/
 
   ajax_fail = function(xhr, textStatus, errorThrown) {
-    show_error('Unable to communicate with server: ' + textStatus);
+    show_error('error', 'Unable to communicate with server: ' + textStatus);
   },
  
-  show_error = function(msg) {
-    if (msg == undefined) {
+  show_error = function(status, msg) {
+    if (status == 'auth') {
+      w2confirm('You have been logged out. Do you wish to refresh the page to reauthenticate?')
+        .yes(function() { 
+          window.location.reload();
+        })
+       .no(function() {
+       });
+    }
+    else if (msg == undefined) {
       w2alert('Error communicating with server');
       set_status('An error occurred');
     }
