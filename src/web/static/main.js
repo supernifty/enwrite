@@ -155,6 +155,9 @@ var
                         load_document(g.document_target); 
                         $().w2popup('close');
                     }
+                    else {
+                      show_error(data.status, data.message);
+                    }
                   }) 
                 },
                 "reset": function () { this.clear(); }
@@ -185,20 +188,38 @@ var
     return false;
   },
 
+  get_location = function(path) {
+    // TODO clickable folders
+    var l = [];
+    for (var i in path) {
+      l.push(path[i].name);
+    }
+    if (l.length > 0) {
+      return l.join('/');
+    }
+    else {
+      return "Top level";
+    }
+  },
+
   update_document_details = function() {
     var current = g.tab_cache['tab_' + g.document_target], 
       attachment_list = '',
       summary_list = '';
     // attachments
     for (var attachment in current.attachments) {
-      attachment_list += '<li><a target="_blank" href="/get/attachment?project_id=' + g.project_id + '&id=' + current.attachments[attachment].id + '">' + escape_html(current.attachments[attachment].name) + '</a>&nbsp;<a href="" onclick="return delete_attachment(\'' + current.attachments[attachment].id + '\')"><i class="fas fa-trash"></i></a></li>';
+      attachment_list += '<a target="_blank" href="/get/attachment?project_id=' + g.project_id + '&id=' + current.attachments[attachment].id + '">' + escape_html(current.attachments[attachment].name) + '</a>&nbsp;<a href="" onclick="return delete_attachment(\'' + current.attachments[attachment].id + '\')"><i class="fas fa-trash"></i></a><br/>';
     }
+
     // summary information
-    summary_list += '<li>Updated ' + moment(current.updated).fromNow() + '</li>';
+    summary_list += 
+      '<strong>Location:</strong> ' + get_location(current.path) + '<br/>' +
+      '<strong>Updated</strong> ' + moment(current.updated).fromNow() + '<br/>';
+
     // write to view
     w2ui.main_layout.content('right', 
-      '<h3>Details</h3><div class="details"><ul>' + summary_list + '</ul></div>' +
-      '<h3>' + current.attachments.length + ' attachment(s)</h3><div class="details"><ul>' + attachment_list + '</ul><p><a href="" onclick="return add_attachment()">Upload...</a></p></div>');
+      '<h3>Details</h3><div class="details">' + summary_list + '</div>' +
+      '<h3>' + current.attachments.length + ' attachment(s)</h3><div class="details">' + attachment_list + '</div><p><a href="" onclick="return add_attachment()">Upload...</a></p>');
   },
 
   select_tab = function(ev) {
@@ -1275,6 +1296,9 @@ var
                     if (data.status == 'success') {
                         get_documents();
                         $().w2popup('close');
+                    }
+                    else {
+                      show_error(data.status, data.message);
                     }
                   }) 
                 },

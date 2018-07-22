@@ -106,7 +106,9 @@ def get_data(category):
                raise query.QueryException("Required parameter project_id not provided")
            if flask.request.args.get('document_id') is None:
                raise query.QueryException("Required parameter document_id not provided")
-           return flask.jsonify(username=authenticator.username(flask.session), document=query.document(db(), authenticator.user_id(flask.session), flask.request.args.get('project_id'), flask.request.args.get('document_id')).detail())
+
+           document = query.document(db(), authenticator.user_id(flask.session), flask.request.args.get('project_id'), flask.request.args.get('document_id'))
+           return flask.jsonify(username=authenticator.username(flask.session), document=document.detail())
 
         if category == 'folder':
            if flask.request.args.get('project_id') is None:
@@ -115,7 +117,7 @@ def get_data(category):
                raise query.QueryException("Required parameter document_id not provided")
            folder = query.folder(db(), authenticator.user_id(flask.session), flask.request.args.get('project_id'), flask.request.args.get('document_id'))
            children = query.children(db(), folder)
-           return flask.jsonify(username=authenticator.username(flask.session), document=folder.summary(), children=query.detail(children))
+           return flask.jsonify(username=authenticator.username(flask.session), document=folder.detail(), children=query.detail(children))
 
         if category == 'attachment':
            if flask.request.args.get('project_id') is None:

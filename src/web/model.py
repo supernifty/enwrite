@@ -110,6 +110,14 @@ class Document(Base):
     ),
   )
 
+  def path(self):
+    result = []
+    document = self.parent
+    while document is not None and len(result) < 8:
+      result.append(document)
+      document = document.parent
+    return result
+
   def summary(self):
     '''
       summary document info
@@ -120,7 +128,7 @@ class Document(Base):
     '''
       full document info
     '''
-    return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'content': self.content, 'renderer': self.renderer, 'updated': self.updated, 'attachments': [item.detail() for item in self.document_attachments]}
+    return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'content': self.content, 'renderer': self.renderer, 'updated': self.updated, 'attachments': [item.detail() for item in self.document_attachments], 'path': [{'id': item.id, 'name': item.name} for item in self.path()]}
 
   def export(self):
     return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'content': self.content, 'renderer': self.renderer, 'updated': self.updated, 'attachments': [item.detail() for item in self.document_attachments], 'parent_id': self.parent_id, 'predecessor_id': self.predecessor_id}
@@ -148,6 +156,8 @@ class Attachment(Base):
       summary of attachment info
     '''
     return {'id': self.id, 'name': self.name, 'location': self.location, 'size': self.size}
+
+# access and authentication
 
 class AccessToken(Base):
   '''
