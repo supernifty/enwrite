@@ -116,7 +116,7 @@ class Document(Base):
     while document is not None and len(result) < 8:
       result.append(document)
       document = document.parent
-    return result
+    return reversed(result)
 
   def summary(self):
     '''
