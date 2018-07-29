@@ -22,6 +22,13 @@ var
     '=': '&#x3D;'
   },
 
+  ACCESS_MAP = {
+    'd': 'Custom',
+    'r': 'Read only',
+    'c': 'Comment only',
+    'w': 'Full access'
+  },
+
   MAX_SUMMARY = 1024,
   MAX_TITLE = 40,
   AUTOSAVE_TIMER = 5000,
@@ -642,8 +649,44 @@ var
   },
 
   share_project = function() {
-        if (w2ui.share_project) {
+    $.ajax({
+      type: "GET",
+      url: '/get/shares', 
+      data: {
+        project_id: g.project_id
+      }
+    }).done(share_project_form)
+      .fail(ajax_fail);
+  },
+
+  confirm_revoke = function(id) {
+    w2confirm({ msg: 'Are you sure?', btn_yes: {text: 'Revoke'}, btn_no: {text: 'Cancel'} })
+      .yes(function () { 
+        $.ajax({
+          type: "POST",
+          url: '/set/share_revoke', 
+          data: {
+            project_id: g.project_id,
+            id: id
+          }
+        }).done(share_project_form)
+          .fail(ajax_fail);
+      })
+      .no(function () {});
+  },
+
+  map_access = function(a) {
+    return ACCESS_MAP[a]; 
+  }
+
+  share_project_form = function(share_data) {
+      if (share_data.status != 'success') {
+        show_error(share_data.status, share_data.message);
+        return;
+      }
+      if (w2ui.share_project) {
         $().w2destroy('share_project');
+        $().w2destroy('shares_grid');
       }
       $().w2form({
           name: 'share_project',
@@ -651,19 +694,22 @@ var
           url: '/share_p',
           formHTML: 
               '<div class="w2ui-page page-0">'+
+              '    <div><strong>Existing Collaborators</strong></div>'+
+              '    <div id="shares_grid" style="width: 100%; height: 120px;"></div>' +
+              '    <div>&nbsp;</div>' +
               '    <div class="w2ui-field">'+
-              '        <label>Access type:</label>'+
-              '        <div>'+
-              '            <select name="access"/>'+
-              '        </div>'+
+              '      <label>Add collaborator:</label>'+
+              '      <div>'+
+              '          <select name="access"/>'+
+              '      </div>'+
               '    </div>'+
               '</div>'+
               '<div class="w2ui-buttons">'+
               '    <button class="w2ui-btn" name="reset">Reset</button>'+
-              '    <button class="w2ui-btn" name="ok">OK</button>'+
+              '    <button class="w2ui-btn" name="ok">Add</button>'+
               '</div>',
           fields: [
-              { field: 'access', type: 'select', required: true, options: { items: [{id: 'r', text: 'View only'}, {id: 'c', text: 'Comment only'}, {id: 'w', text: 'Full access'}] } }
+              { field: 'access', type: 'select', required: true, options: { items: [{id: 'r', text: 'Read only'}, {id: 'c', text: 'Comment only'}, {id: 'w', text: 'Full access'}] } }
           ],
           record: {
               access: 'r',
@@ -688,8 +734,8 @@ var
         title   : 'Share project',
         body    : '<div id="form" style="width: 100%; height: 100%;"></div>',
         style   : 'padding: 15px 0px 0px 0px',
-        width   : 500,
-        height  : 300, 
+        width   : 600,
+        height  : 320, 
         showMax : true,
         onToggle: function (event) {
             $(w2ui.share_project.box).hide();
@@ -699,10 +745,21 @@ var
             }
         },
         onOpen: function (event) {
-            event.onComplete = function () {
+           event.onComplete = function () {
                 // specifying an onOpen handler instead is equivalent to specifying an onBeforeOpen handler, which would make this code execute too early and hence not deliver.
                 $('#w2ui-popup #form').w2render('share_project');
-            }
+                $('#shares_grid').w2grid({
+                    name: 'shares_grid',
+                    columns: [ { 
+                      field: 'username', caption: 'Username', size: '65%' }, { 
+                      field: 'access', caption: 'Access', size: '20%', render: function(record) { return map_access(record.access); } }, { 
+                      field: 'action', caption: 'Action', size: '15%', render: function(record) {
+                        return '<div><button class="w2ui-btn w2ui-btn-small" onclick="confirm_revoke(\'' + record.recid + '\')">Revoke</button></div>';
+                      } 
+                    } ],
+                    records: share_data.shares
+                });
+             }
         }
       });
   },

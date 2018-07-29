@@ -100,6 +100,11 @@ def get_data(category):
                raise query.QueryException("Required parameter project_id not provided")
            return flask.jsonify(username=authenticator.username(flask.session), documents=query.documents(db(), authenticator.user_id(flask.session), flask.request.args.get('project_id')))
 
+        if category == 'shares':
+           if flask.request.args.get('project_id') is None:
+               raise query.QueryException("Required parameter project_id not provided")
+           return flask.jsonify(status="success", username=authenticator.username(flask.session), shares=query.detail(query.shares(db(), authenticator.user_id(flask.session), flask.request.args.get('project_id'))))
+
         # document level
         if category == 'document':
            if flask.request.args.get('project_id') is None:
@@ -152,6 +157,13 @@ def set_data(category):
             query.delete_project(db(), authenticator.user_id(flask.session), project_id)
             return flask.jsonify(status="success")
     
+        if category == 'share_revoke': # revoke access
+            project_id = flask.request.form['project_id']
+            project_user_id = flask.request.form['id']
+            query.revoke_access(db(), authenticator.user_id(flask.session), project_id, project_user_id)
+            shares = query.detail(query.shares(db(), authenticator.user_id(flask.session), project_id))
+            return flask.jsonify(status="success", shares=shares)
+
         if category == 'document': # add folder/document
             req = json.loads(flask.request.form['request'])
             query.add_document(db(), authenticator.user_id(flask.session), req['record']['project_id'], req['record']['document_type'], req['record']['name'], req['record']['parent_id'], req['record']['predecessor_id'])
@@ -194,6 +206,8 @@ def set_data(category):
             return flask.jsonify(status="success")
 
 
+    except query.AccessException as ex:
+        return flask.jsonify(status="access", message=ex.message)
     except query.QueryException as ex:
         return flask.jsonify(status="error", message=ex.message)
 

@@ -71,6 +71,12 @@ class ProjectUser(Base):
     '''
     return {'id': self.project_id, 'name': self.project.name, 'renderer': self.project.renderer, 'created': self.created, 'access': self.access}
 
+  def detail(self):
+    '''
+      returns project details
+    '''
+    return {'recid': self.id, 'created': self.created, 'access': self.access, 'username': self.user.email}
+
 # a tree of documents
 class Document(Base):
   __tablename__ = 'document'

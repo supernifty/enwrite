@@ -14,6 +14,10 @@ ACCESS_READ = 'r'
 ACCESS_COMMENT = 'c'
 ACCESS_WRITE = 'w'
 
+class AccessException(Exception):
+  def __init__(self, message):
+    self.message = message
+
 class QueryException(Exception):
   def __init__(self, message):
     self.message = message
@@ -27,9 +31,15 @@ def detail(objects):
 
 # getters
 def projects(db, user_id):
+  '''
+    projects owned by this user
+  '''
   return db.query(model.Project).filter(model.Project.owner_id == user_id)
 
 def shared_projects(db, user_id):
+  '''
+    projects shared to this user
+  '''
   return [ project_user for project_user in db.query(model.ProjectUser).distinct(model.ProjectUser.project_id).filter(model.ProjectUser.user_id == user_id) ]
 
 def get_project_access(db, project_id, user_id, required_access):
@@ -46,10 +56,22 @@ def get_project_access(db, project_id, user_id, required_access):
   project_user = db.query(model.ProjectUser).filter(model.ProjectUser.project_id == project_id).filter(model.ProjectUser.user_id == user_id).first()
   if project_user is not None:
     if project_user.access == ACCESS_READ and required_access in (ACCESS_COMMENT, ACCESS_WRITE) or project_user.access == ACCESS_COMMENT and required_access == ACCESS_WRITE:
-      raise QueryException("Insufficient access")
+      raise AccessException("Insufficient access")
     return (project_user.project, project_user.access)
 
   raise QueryException("Invalid project")
+
+def shares(db, user_id, project_id):
+  '''
+    who is this project shared with?
+  '''
+  user = db.query(model.User).filter(model.User.id == user_id).first()
+  if user is None:
+    raise QueryException("Authentication error")
+
+  project, access = get_project_access(db, project_id, user_id, ACCESS_READ)
+
+  return db.query(model.ProjectUser).filter(model.ProjectUser.project_id == project_id)
 
 def documents(db, user_id, project_id):
   '''
@@ -448,7 +470,7 @@ def delete_project(db, user_id, project_id):
   user = db.query(model.User).filter(model.User.id == user_id).first()
   project = db.query(model.Project).filter(model.Project.id == project_id, model.Project.owner == user).first()
   if project is None:
-    raise QueryException("Invalid project")
+    raise QueryException("Only the project owner can do this")
 
   # delete all asset files
   for attachment in db.query(model.Attachment).filter(model.Attachment.project_id == project_id):
@@ -466,7 +488,7 @@ def delete_document(db, user_id, project_id, document_id):
     raise QueryException("Authentication failed")
   project = db.query(model.Project).filter(model.Project.id == project_id, model.Project.owner == user).first()
   if project is None:
-    raise QueryException("Invalid project")
+    raise QueryException("Only the project owner can do this")
   document = db.query(model.Document).filter((model.Document.id == document_id) & (model.Document.project_id == project_id)).one_or_none()
   if document is None:
     raise QueryException("Invalid document")
@@ -486,7 +508,7 @@ def delete_attachment(db, user_id, project_id, attachment_id):
     raise QueryException("Authentication failed")
   project = db.query(model.Project).filter(model.Project.id == project_id, model.Project.owner == user).first()
   if project is None:
-    raise QueryException("Invalid project")
+    raise QueryException("Only the project owner can do this")
   attachment = db.query(model.Attachment).filter((model.Attachment.id == attachment_id) & (model.Attachment.project_id == project_id)).one_or_none()
   if attachment is None:
     raise QueryException("Invalid attachment")
@@ -499,6 +521,20 @@ def delete_attachment(db, user_id, project_id, attachment_id):
   db.delete(attachment)
   db.commit()
 
+def revoke_access(db, user_id, project_id, project_user_id):
+  user = db.query(model.User).filter(model.User.id == user_id).first()
+  if user is None:
+    raise QueryException("Authentication failed")
+
+  project, access = get_project_access(db, project_id, user_id, ACCESS_WRITE)
+
+  project_user = db.query(model.ProjectUser).filter(model.ProjectUser.project == project, model.ProjectUser.id == project_user_id).one_or_none()
+  if project_user is None:
+    raise QueryException("Invalid access")
+
+  db.delete(project_user)
+  db.commit()
+
 def add_token(db, user_id, project_id, access, document_id=None ):
   user = db.query(model.User).filter(model.User.id == user_id).first()
   if user is None:
@@ -506,7 +542,7 @@ def add_token(db, user_id, project_id, access, document_id=None ):
 
   project = db.query(model.Project).filter(model.Project.id == project_id, model.Project.owner == user).first()
   if project is None:
-    raise QueryException("Invalid project")
+    raise QueryException("Only the project owner can do this")
 
   if access not in ('c', 'r', 'w'):
     raise QueryException("Invalid access type")
