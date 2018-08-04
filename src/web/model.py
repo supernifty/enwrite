@@ -128,7 +128,7 @@ class Document(Base):
     '''
       summary document info
     '''
-    return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'renderer': self.renderer, 'attachments': [item.detail() for item in self.document_attachments]} #, 'content': self.content}
+    return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'renderer': self.renderer, 'updated': self.updated, 'attachments': [item.detail() for item in self.document_attachments]} #, 'content': self.content}
 
   def detail(self):
     '''

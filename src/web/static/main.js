@@ -295,13 +295,30 @@ var
       current = g.tab_cache['tab_search'].documents;
       var content = '<div>' +
         current.length + ' document(s) matched query "' + escape_html(g.tab_cache['tab_search'].q) + '"' +
-        '<ul>';
+        '</div><div id="search_grid" style="width: 100%;" class="w2ui-grid-light"></div>',
+        records = [];
       for (var document of current) {
-        content += '<li><a href="#" onclick="open_document(\'' + document.id + '\'); return false">' + document.name + '</a></li>';
+        records.push({'recid': document.id, 'name': document.name, 'updated': moment(document.updated).format()})
+        // content += '<li><a href="#" onclick="open_document(\'' + document.id + '\'); return false">' + document.name + '</a></li>';
       }
-      content += '</ul></div>';
       w2ui.main_layout.content('main', content); // main content
       w2ui.main_layout.content('right', '');
+      $().w2destroy('search_grid');
+      $('#search_grid').w2grid({
+        name: 'search_grid',
+        fixedBody: false,
+        show: { footer: true, toolbar: true, toolbarSearch: true, toolbarReload: false, toolbarColumns: false },
+        columns: [ { 
+          field: 'name', caption: 'Title', size: '60%', sortable: true, searchable: true, render: function(record) {
+            return '<div><a href="#" onclick="open_document(\'' + record.recid + '\')">' + escape_html(record.name) + '</button></div>';
+          } 
+        }, {
+          field: 'updated', caption: 'Updated', size: '20%', sortable: true, render: function(record) {
+            return moment(record.updated).fromNow();
+          }
+        } ],
+        records: records
+      });
     }
     else {
       show_error('error', 'unrecognized document type ' + selected_document.document_type);
