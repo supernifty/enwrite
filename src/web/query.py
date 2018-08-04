@@ -14,6 +14,8 @@ ACCESS_READ = 'r'
 ACCESS_COMMENT = 'c'
 ACCESS_WRITE = 'w'
 
+SEARCH_LIMIT = 50
+
 class AccessException(Exception):
   def __init__(self, message):
     self.message = message
@@ -124,10 +126,16 @@ def search(db, user_id, project_id, q):
   #result = db.query(model.Document).filter(model.Document.project == project, sqlalchemy.or_(model.Document.name.contains(q), model.Document.content.contains(q)))
 
   # using fts
-  result = db.query(model.Document).filter(model.Document.project == project, model.Document.__ts_vector__.op('@@')(sqlalchemy.sql.func.plainto_tsquery(q)))
+  return db.query(model.Document).filter(model.Document.project == project, model.Document.__ts_vector__.op('@@')(sqlalchemy.sql.func.plainto_tsquery(q)))
 
-  return result
+def search_recent(db, user_id, project_id):
+  user = db.query(model.User).filter(model.User.id == user_id).first()
+  if user is None:
+    raise QueryException("Authentication error")
+  project, access = get_project_access(db, project_id, user_id, ACCESS_READ)
 
+  return db.query(model.Document).filter(model.Document.project == project).order_by(model.Document.updated.desc()).limit(SEARCH_LIMIT)
+ 
 def make_tree(root, documents):
   result = []
   current = root

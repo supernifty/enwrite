@@ -559,6 +559,7 @@ var
       case "menu_document:preview_document": return preview_document();
       case "menu_document:save_document": return save_current_document();
       case "menu_document:save_all": return save_all();
+      case "menu_document:recent_documents": return recent_documents();
       case "menu_about": location.href = "/about"; return true;
       case "menu_user": return true;
       case "menu_user:menu_autosave": return toggle_autosave();
@@ -969,7 +970,9 @@ var
       { text: 'Edit', id: 'edit_document' },
       { text: 'Preview', id: 'preview_document' },
       { text: 'Save', id: 'save_document' },
-      { text: 'Save All', id: 'save_all' }
+      { text: 'Save All', id: 'save_all' },
+      { text: '--', id: 'document_separator' },
+      { text: 'Recently Updated', id: 'recent_documents' }
     ]});
 
     w2ui.main_toolbar.insert('menu_right', { type: 'html', id: 'menu_search', html: function(item) {
@@ -1138,6 +1141,18 @@ var
       .fail(ajax_fail);
     return false;
   },
+
+  recent_documents = function() {
+    $.ajax({
+      type: "POST",
+      url: '/search_recent', 
+      data: {
+        project_id: g.project_id
+      }})
+      .done(show_search)
+      .fail(ajax_fail);
+    return false;
+  }
 
   show_search = function(data) {
     // find or create search tab
