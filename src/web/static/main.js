@@ -298,8 +298,7 @@ var
         '</div><div id="search_grid" style="width: 100%;" class="w2ui-grid-light"></div>',
         records = [];
       for (var document of current) {
-        records.push({'recid': document.id, 'name': document.name, 'updated': moment(document.updated).format()})
-        // content += '<li><a href="#" onclick="open_document(\'' + document.id + '\'); return false">' + document.name + '</a></li>';
+        records.push({'recid': document.id, 'name': document.name, 'type': document.document_type, 'updated': moment(document.updated).format()})
       }
       w2ui.main_layout.content('main', content); // main content
       w2ui.main_layout.content('right', '');
@@ -310,7 +309,9 @@ var
         show: { footer: true, toolbar: true, toolbarSearch: true, toolbarReload: false, toolbarColumns: false },
         columns: [ { 
           field: 'name', caption: 'Title', size: '60%', sortable: true, searchable: true, render: function(record) {
-            return '<div><a href="#" onclick="open_document(\'' + record.recid + '\')">' + escape_html(record.name) + '</button></div>';
+            return '<div>' + 
+              (record.type == 'folder' ? '<i class="far fa-folder-open" style="color: #c5ac6b"></i>' : '<i class="far fa-file" style="color: #536184"></i>') + 
+              '</i>&nbsp;<a href="#" onclick="open_document(\'' + record.recid + '\')">' + escape_html(record.name) + '</a></div>';
           } 
         }, {
           field: 'updated', caption: 'Updated', size: '20%', sortable: true, render: function(record) {
