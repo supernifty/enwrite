@@ -576,7 +576,7 @@ def apply_token(db, user_id, token_id):
   
   token = db.query(model.AccessToken).filter(model.AccessToken.token == token_id).first()
   if token is None:
-    raise QueryException("Invalid access token: token does not exist or has already been redeemed.")
+    return(False, "Access token does not exist or has already been redeemed")
 
   # TODO check for sharing with self
   # TODO check for existing
@@ -591,4 +591,4 @@ def apply_token(db, user_id, token_id):
   db.delete(token)
   db.commit()
   
-  return user_access
+  return (True, user_access)

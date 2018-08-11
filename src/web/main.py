@@ -90,11 +90,21 @@ def get_data(category):
     try:
         # project level
         if category == 'projects':
-           return flask.jsonify(
-               username=authenticator.username(flask.session), 
-               projects=query.summary(query.projects(db(), authenticator.user_id(flask.session)).all()),
-               shared=query.summary(query.shared_projects(db(), authenticator.user_id(flask.session))) 
-           )
+           if 'message' in flask.session:
+               message=flask.session['message']
+               del flask.session['message']
+               return flask.jsonify(
+                   message=message,
+                   username=authenticator.username(flask.session), 
+                   projects=query.summary(query.projects(db(), authenticator.user_id(flask.session)).all()),
+                   shared=query.summary(query.shared_projects(db(), authenticator.user_id(flask.session))) 
+               )
+           else:
+               return flask.jsonify(
+                   username=authenticator.username(flask.session), 
+                   projects=query.summary(query.projects(db(), authenticator.user_id(flask.session)).all()),
+                   shared=query.summary(query.shared_projects(db(), authenticator.user_id(flask.session))) 
+               )
 
         if category == 'documents':
            if flask.request.args.get('project_id') is None:
@@ -284,10 +294,14 @@ def access(token):
     try:
         # apply token and redirect
         result = query.apply_token(db(), authenticator.user_id(flask.session), token)
-        if result:
+        if result[0]: # token has been applied
+            return flask.redirect(flask.url_for('home'))
+        else: # token was not applied
+            flask.session["message"] = result[1]
             return flask.redirect(flask.url_for('home'))
     except query.QueryException as ex:
-        return flask.jsonify(status="error", message=ex.message) # TODO should be html based error
+        flask.session["message"] = ex.message
+        return flask.redirect(flask.url_for('home'))
 
 # search
 @app.route("/search", methods=['POST'])

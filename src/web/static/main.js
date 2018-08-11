@@ -932,6 +932,9 @@ var
 
   show_projects = function(data) {
     w2ui.main_toolbar.set('menu_user', { text: 'Logged in as ' + escape_html(data.username) });
+    if ('message' in data) {
+      w2alert(data.message);
+    }
     show_autosave();
     remove_sidebar_nodes();
     var projects = [];
