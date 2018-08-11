@@ -11,6 +11,7 @@ import io
 import json
 import mimetypes
 import os
+import urllib.parse
 import zipfile
 
 import sqlalchemy
@@ -276,12 +277,17 @@ def access(token):
         use a token to accept access to a document
     '''
     if not authenticator.is_auth(flask.session):
-      return flask.redirect(flask.url_for('login'))
+        target = flask.url_for('access', token=token)
+        login_target = flask.url_for('login', post=urllib.parse.quote_plus(target))
+        return flask.redirect(login_target)
 
-    # apply token and redirect
-    result = query.apply_token(db(), authenticator.user_id(flask.session), token)
-    if result:
-        return flask.redirect(flask.url_for('home'))
+    try:
+        # apply token and redirect
+        result = query.apply_token(db(), authenticator.user_id(flask.session), token)
+        if result:
+            return flask.redirect(flask.url_for('home'))
+    except query.QueryException as ex:
+        return flask.jsonify(status="error", message=ex.message) # TODO should be html based error
 
 # search
 @app.route("/search", methods=['POST'])
@@ -334,9 +340,10 @@ def render():
         os.system('/bin/rm {root}/_fragment.*'.format(user_id=user_id, root=root))
  
 ### authentication logic ###
-@app.route('/login')
-def login():
-    return authenticator.authorize(flask.session, db())
+@app.route('/login', defaults={'post': None})
+@app.route('/login/post/')
+def login(post):
+    return authenticator.authorize(flask.session, db(), post=post)
 
 @app.route('/logout')
 def logout():
@@ -348,13 +355,21 @@ def about():
     return flask.render_template('about.html')
 
 # end up here after authentication
-@app.route('/authorized')
+@app.route('/authorized', defaults={'post': None})
+@app.route('/authorized/<path:post>')
 def authorized():
     result = authenticator.authorized(flask.session, db())
     if result is None:
-        return flask.redirect(flask.url_for('home'))
+        if post is None:
+            return flask.redirect(flask.url_for('home'))
+        else:
+            unquoted = urllib.parse.unquote_plus(post)
+            if auth.is_safe_url(unquoted):
+                return flask.redirect(unquoted)
+            else:
+                return result # TODO: error page
     else:
-        return result # todo: error page
+        return result # TODO: error page
 
 @authenticator.google.tokengetter
 def get_google_oauth_token():

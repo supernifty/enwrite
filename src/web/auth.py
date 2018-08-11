@@ -1,4 +1,5 @@
 import types
+import urllib.parse
 
 import flask
 import flask_oauthlib.client
@@ -8,6 +9,11 @@ import query
 
 def dummy(_):
     pass
+
+def is_safe_url(target):
+    ref_url = urllib.parse.urlparse(flask.request.host_url)
+    test_url = urllib.parse.urlparse(urllib.parse.urljoin(flask.request.host_url, target))
+    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
 
 class NoAuth (object):
     def __init__(self, app):
@@ -22,12 +28,19 @@ class NoAuth (object):
     def user_id(self, session):
         return session['user_id']
 
-    def authorize(self, session, db):
+    def authorize(self, session, db, post=None):
         session['google_email'] = config.DEFAULT_USER
         # find and add userid
         session['user_id'] = query.find_or_add_user(db, config.DEFAULT_USER).id
 
-        return flask.redirect(flask.url_for("home"))
+        if post is None:
+            return flask.redirect(flask.url_for("home"))
+        else:
+            unquoted = urllib.parse.unquote_plus(post)
+            if is_safe_url(unquoted):
+                return flask.redirect(unquoted) # TODO check
+            else:
+                return None # todo: error page
 
     def logout(self, session):
         session.clear()
@@ -59,8 +72,8 @@ class GoogleAuth (object):
     def user_id(self, session):
         return session['user_id']
 
-    def authorize(self, session, db):
-        return self.google.authorize(callback=flask.url_for('authorized', _external=True))
+    def authorize(self, session, db, post=None):
+        return self.google.authorize(callback=flask.url_for('authorized', _external=True, post=post))
 
     def logout(self, session):
         session.clear()
