@@ -341,7 +341,7 @@ def render():
  
 ### authentication logic ###
 @app.route('/login', defaults={'post': None})
-@app.route('/login/post/')
+@app.route('/login/<post>/')
 def login(post):
     return authenticator.authorize(flask.session, db(), post=post)
 
@@ -356,7 +356,7 @@ def about():
 
 # end up here after authentication
 @app.route('/authorized', defaults={'post': None})
-@app.route('/authorized/<path:post>')
+@app.route('/authorized/<post>/')
 def authorized():
     result = authenticator.authorized(flask.session, db())
     if result is None:
