@@ -355,15 +355,14 @@ def about():
     return flask.render_template('about.html')
 
 # end up here after authentication
-@app.route('/authorized', defaults={'post': None})
-@app.route('/authorized/<post>/')
+@app.route('/authorized')
 def authorized():
     result = authenticator.authorized(flask.session, db())
     if result is None:
-        if post is None:
+        if flask.session.get('next') is None:
             return flask.redirect(flask.url_for('home'))
         else:
-            unquoted = urllib.parse.unquote_plus(post)
+            unquoted = urllib.parse.unquote_plus(flask.session.get('next'))
             if auth.is_safe_url(unquoted):
                 return flask.redirect(unquoted)
             else:

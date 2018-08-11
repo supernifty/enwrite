@@ -73,7 +73,9 @@ class GoogleAuth (object):
         return session['user_id']
 
     def authorize(self, session, db, post=None):
-        callback=flask.url_for('authorized', _external=True, post=post)
+        if post is not None:
+            session['next'] = post
+        callback=flask.url_for('authorized', _external=True)
         return self.google.authorize(callback=callback)
 
     def logout(self, session):
