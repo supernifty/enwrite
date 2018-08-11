@@ -276,7 +276,7 @@ def access(token):
         use a token to accept access to a document
     '''
     if not authenticator.is_auth(flask.session):
-      return flask.jsonify(status="auth", message="User is not authenticated")
+      return flask.redirect(flask.url_for('login'))
 
     # apply token and redirect
     result = query.apply_token(db(), authenticator.user_id(flask.session), token)
