@@ -199,7 +199,7 @@ var
     // TODO clickable folders
     var l = [];
     for (var i in path) {
-      l.push(path[i].name);
+      l.push(escape_html(path[i].name));
     }
     if (l.length > 0) {
       return l.join('/');
@@ -221,6 +221,7 @@ var
     // summary information
     summary_list += 
       '<strong>Location:</strong> ' + get_location(current.path) + '<br/>' +
+      '<strong>Name:</strong> ' + escape_html(current.name) + '<br/>' +
       '<strong>Updated</strong> ' + moment(current.updated).fromNow() + '<br/>';
 
     // write to view
