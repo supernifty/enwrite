@@ -88,6 +88,7 @@ class Document(Base):
   name = sqlalchemy.Column(sqlalchemy.String(250), nullable=False)
   document_type = sqlalchemy.Column(sqlalchemy.String(8), nullable=False) # folder, document
   renderer = sqlalchemy.Column(sqlalchemy.String(8), nullable=False, default='Markdown') # latex, markdown
+  #tags = sqlalchemy.Column(sqlalchemy.SmallInteger, nullable=False, default=0) # 1=star
   content = sqlalchemy.Column(sqlalchemy.Text, nullable=False, default='')
 
   # project for this document

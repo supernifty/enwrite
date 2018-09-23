@@ -128,49 +128,48 @@ var
   },
 
   add_attachment = function() {
-    if (!w2ui.add_attachment) {
-        $().w2form({
-            name: 'add_attachment',
-            style: 'border: 0px; background-color: transparent;',
-            url: '/set/attachment',
-            formHTML: 
-                '<div class="w2ui-page page-0">'+
-                '    <div class="w2ui-field">'+
-                '        <label>Files:</label>'+
-                '        <div>'+
-                '           <input name="file" id="file" style="width: 400px"/>'+
-                '        </div>'+
-                '    </div>'+
-                '</div>'+
-                '<div class="w2ui-buttons">'+
-                '    <button class="w2ui-btn" name="reset">Reset</button>'+
-                '    <button class="w2ui-btn" name="ok">OK</button>'+
-                '</div>',
-            fields: [
-                { field: 'file', type: 'file', required: true }
-            ],
-            record: { 
-                project_id: g.project_id,
-                //id: g.documents[g.document_target].document.id
-                id: g.document_target
+    remove_form('add_attachment');
+    $().w2form({
+        name: 'add_attachment',
+        style: 'border: 0px; background-color: transparent;',
+        url: '/set/attachment',
+        formHTML: 
+            '<div class="w2ui-page page-0">'+
+            '    <div class="w2ui-field">'+
+            '        <label>Files:</label>'+
+            '        <div>'+
+            '           <input name="file" id="file" style="width: 400px"/>'+
+            '        </div>'+
+            '    </div>'+
+            '</div>'+
+            '<div class="w2ui-buttons">'+
+            '    <button class="w2ui-btn" name="reset">Reset</button>'+
+            '    <button class="w2ui-btn" name="ok">OK</button>'+
+            '</div>',
+        fields: [
+            { field: 'file', type: 'file', required: true }
+        ],
+        record: { 
+            project_id: g.project_id,
+            //id: g.documents[g.document_target].document.id
+            id: g.document_target
+        },
+        actions: {
+            "ok": function () { 
+              this.save(function (data) {
+                if (data.status == 'success') {
+                    delete g.tab_cache['tab_' + g.document_target];
+                    load_document(g.document_target); 
+                    $().w2popup('close');
+                }
+                else {
+                  show_error(data.status, data.message);
+                }
+              }) 
             },
-            actions: {
-                "ok": function () { 
-                  this.save(function (data) {
-                    if (data.status == 'success') {
-                        delete g.tab_cache['tab_' + g.document_target];
-                        load_document(g.document_target); 
-                        $().w2popup('close');
-                    }
-                    else {
-                      show_error(data.status, data.message);
-                    }
-                  }) 
-                },
-                "reset": function () { this.clear(); }
-            }
-        });
-    }
+            "reset": function () { this.clear(); }
+        }
+    });
     $().w2popup('open', {
         title   : 'Add attachment',
         body    : '<div id="form" style="width: 100%; height: 100%;"></div>',
@@ -785,51 +784,50 @@ var
   },
 
   add_project = function() {
-    if (!w2ui.add_project) {
-        $().w2form({
-            name: 'add_project',
-            style: 'border: 0px; background-color: transparent;',
-            url: '/set/project',
-            formHTML: 
-                '<div class="w2ui-page page-0">'+
-                '    <div class="w2ui-field">'+
-                '        <label>Project Name:</label>'+
-                '        <div>'+
-                '           <input name="name" type="text" maxlength="200" style="width: 250px"/>'+
-                '        </div>'+
-                '    </div>'+
-                '    <div class="w2ui-field">'+
-                '        <label>Default Renderer:</label>'+
-                '        <div>'+
-                '            <select name="renderer"/>'+
-                '        </div>'+
-                '    </div>'+
-                '</div>'+
-                '<div class="w2ui-buttons">'+
-                '    <button class="w2ui-btn" name="reset">Reset</button>'+
-                '    <button class="w2ui-btn" name="ok">OK</button>'+
-                '</div>',
-            fields: [
-                { field: 'name', type: 'text', required: true },
-                { field: 'renderer', type: 'select', required: true, options: { items: ['Markdown', 'Latex'] } }
-            ],
-            record: { 
-                name    : 'Untitled',
-                renderer: 'Markdown'
+    remove_form('add_project');
+    $().w2form({
+        name: 'add_project',
+        style: 'border: 0px; background-color: transparent;',
+        url: '/set/project',
+        formHTML: 
+            '<div class="w2ui-page page-0">'+
+            '    <div class="w2ui-field">'+
+            '        <label>Project Name:</label>'+
+            '        <div>'+
+            '           <input name="name" type="text" maxlength="200" style="width: 250px"/>'+
+            '        </div>'+
+            '    </div>'+
+            '    <div class="w2ui-field">'+
+            '        <label>Default Renderer:</label>'+
+            '        <div>'+
+            '            <select name="renderer"/>'+
+            '        </div>'+
+            '    </div>'+
+            '</div>'+
+            '<div class="w2ui-buttons">'+
+            '    <button class="w2ui-btn" name="reset">Reset</button>'+
+            '    <button class="w2ui-btn" name="ok">OK</button>'+
+            '</div>',
+        fields: [
+            { field: 'name', type: 'text', required: true },
+            { field: 'renderer', type: 'select', required: true, options: { items: ['Markdown', 'Latex'] } }
+        ],
+        record: { 
+            name    : 'Untitled',
+            renderer: 'Markdown'
+        },
+        actions: {
+            "ok": function () { 
+              this.save(function (data) {
+                if (data.status == 'success') {
+                    get_projects();
+                    $().w2popup('close');
+                }
+              }) 
             },
-            actions: {
-                "ok": function () { 
-                  this.save(function (data) {
-                    if (data.status == 'success') {
-                        get_projects();
-                        $().w2popup('close');
-                    }
-                  }) 
-                },
-                "reset": function () { this.clear(); }
-            }
-        });
-    }
+            "reset": function () { this.clear(); }
+        }
+    });
     $().w2popup('open', {
         title   : 'Create new project',
         body    : '<div id="form" style="width: 100%; height: 100%;"></div>',
@@ -854,51 +852,50 @@ var
   },
 
   import_project = function() {
-    if (!w2ui.import_project) {
-        $().w2form({
-            name: 'import_project',
-            style: 'border: 0px; background-color: transparent;',
-            url: '/import',
-            formHTML: 
-                '<div class="w2ui-page page-0">'+
-                '    <div class="w2ui-field">'+
-                '        <label>Import as:</label>'+
-                '        <div>'+
-                '           <input name="name" id="name" style="width: 400px"/>'+
-                '        </div>'+
-                '    </div>'+
-                '    <div class="w2ui-field">'+
-                '        <label>File:</label>'+
-                '        <div>'+
-                '           <input name="file" id="file" style="width: 400px"/>'+
-                '        </div>'+
-                '    </div>'+
-                '</div>'+
-                '<div class="w2ui-buttons">'+
-                '    <button class="w2ui-btn" name="reset">Reset</button>'+
-                '    <button class="w2ui-btn" name="ok">OK</button>'+
-                '</div>',
-            fields: [
-                { field: 'name', type: 'text', required: true },
-                { field: 'file', type: 'file', required: true }
-            ],
-            record: { 
-                name: 'Imported Project',
-                project_id: g.project_id
+    remove_form('import_project');
+    $().w2form({
+        name: 'import_project',
+        style: 'border: 0px; background-color: transparent;',
+        url: '/import',
+        formHTML: 
+            '<div class="w2ui-page page-0">'+
+            '    <div class="w2ui-field">'+
+            '        <label>Import as:</label>'+
+            '        <div>'+
+            '           <input name="name" id="name" style="width: 400px"/>'+
+            '        </div>'+
+            '    </div>'+
+            '    <div class="w2ui-field">'+
+            '        <label>File:</label>'+
+            '        <div>'+
+            '           <input name="file" id="file" style="width: 400px"/>'+
+            '        </div>'+
+            '    </div>'+
+            '</div>'+
+            '<div class="w2ui-buttons">'+
+            '    <button class="w2ui-btn" name="reset">Reset</button>'+
+            '    <button class="w2ui-btn" name="ok">OK</button>'+
+            '</div>',
+        fields: [
+            { field: 'name', type: 'text', required: true },
+            { field: 'file', type: 'file', required: true }
+        ],
+        record: { 
+            name: 'Imported Project',
+            project_id: g.project_id
+        },
+        actions: {
+            "ok": function () { 
+              this.save(function (data) {
+                if (data.status == 'success') {
+                    get_projects();
+                    $().w2popup('close');
+                }
+              }) 
             },
-            actions: {
-                "ok": function () { 
-                  this.save(function (data) {
-                    if (data.status == 'success') {
-                        get_projects();
-                        $().w2popup('close');
-                    }
-                  }) 
-                },
-                "reset": function () { this.clear(); }
-            }
-        });
-    }
+            "reset": function () { this.clear(); }
+        }
+    });
     $().w2popup('open', {
         title   : 'Import project',
         body    : '<div id="form" style="width: 100%; height: 100%;"></div>',
@@ -1011,52 +1008,58 @@ var
     get_documents();
   },
 
+  remove_form = function(form_name) {
+    if (w2ui[form_name]) {
+      $().w2destroy(form_name);
+      w2ui[form_name] = null;
+    }
+  },
+
   /* document */
   add_folder = function() {
-      if (!w2ui.add_folder) {
-        $().w2form({
-            name: 'add_folder',
-            style: 'border: 0px; background-color: transparent;',
-            url: '/set/document',
-            formHTML: 
-                '<div class="w2ui-page page-0">'+
-                '    <div class="w2ui-field">'+
-                '        <label>Title:</label>'+
-                '        <div>'+
-                '           <input name="name" type="text" maxlength="200" style="width: 250px"/>'+
-                '        </div>'+
-                '    </div>'+
-                '</div>'+
-                '<div class="w2ui-buttons">'+
-                '    <button class="w2ui-btn" name="reset">Reset</button>'+
-                '    <button class="w2ui-btn" name="ok">OK</button>'+
-                '</div>',
-            fields: [
-                { field: 'name', type: 'text', required: true }
-            ],
-            record: { 
-                name    : 'Untitled',
-                document_type: 'folder',
-                project_id: g.project_id,
-                parent_id: -1,
-                predecessor_id: -1
-            },
-            actions: {
-                "ok": function () { 
-                  if (g.sidebar_target != null && g.sidebar_target.startsWith('document_')) {
-                    this.record.parent_id = g.documents[g.sidebar_target.substring(9)].document.id;
+      remove_form('add_folder');
+      $().w2form({
+          name: 'add_folder',
+          style: 'border: 0px; background-color: transparent;',
+          url: '/set/document',
+          formHTML: 
+              '<div class="w2ui-page page-0">'+
+              '    <div class="w2ui-field">'+
+              '        <label>Title:</label>'+
+              '        <div>'+
+              '           <input name="name" type="text" maxlength="200" style="width: 250px"/>'+
+              '        </div>'+
+              '    </div>'+
+              '</div>'+
+              '<div class="w2ui-buttons">'+
+              '    <button class="w2ui-btn" name="reset">Reset</button>'+
+              '    <button class="w2ui-btn" name="ok">OK</button>'+
+              '</div>',
+          fields: [
+              { field: 'name', type: 'text', required: true }
+          ],
+          record: { 
+              name    : 'Untitled',
+              document_type: 'folder',
+              project_id: g.project_id,
+              parent_id: -1,
+              predecessor_id: -1
+          },
+          actions: {
+              "ok": function () { 
+                if (g.sidebar_target != null && g.sidebar_target.startsWith('document_')) {
+                  this.record.parent_id = g.documents[g.sidebar_target.substring(9)].document.id;
+                }
+                this.save(function (data) {
+                  if (data.status == 'success') {
+                      get_documents();
+                      $().w2popup('close');
                   }
-                  this.save(function (data) {
-                    if (data.status == 'success') {
-                        get_documents();
-                        $().w2popup('close');
-                    }
-                  }) 
-                },
-                "reset": function () { this.clear(); }
-            }
-        });
-    }
+                }) 
+              },
+              "reset": function () { this.clear(); }
+          }
+    });
     $().w2popup('open', {
         title   : 'Add folder',
         body    : '<div id="form" style="width: 100%; height: 100%;"></div>',
@@ -1279,9 +1282,7 @@ var
   },
 
   edit_document_properties = function(document_id) {
-      if (w2ui.edit_document_properties) {
-        $().w2destroy('edit_document_properties');
-      }
+      remove_form('edit_document_properties');
       var current = g.documents[document_id];
       $().w2form({
           name: 'edit_document_properties',
@@ -1353,53 +1354,52 @@ var
   },
 
   add_document = function() {
-      if (!w2ui.add_document) {
-        $().w2form({
-            name: 'add_document',
-            style: 'border: 0px; background-color: transparent;',
-            url: '/set/document',
-            formHTML: 
-                '<div class="w2ui-page page-0">'+
-                '    <div class="w2ui-field">'+
-                '        <label>Title:</label>'+
-                '        <div>'+
-                '           <input name="name" type="text" maxlength="200" style="width: 250px"/>'+
-                '        </div>'+
-                '    </div>'+
-                '</div>'+
-                '<div class="w2ui-buttons">'+
-                '    <button class="w2ui-btn" name="reset">Reset</button>'+
-                '    <button class="w2ui-btn" name="ok">OK</button>'+
-                '</div>',
-            fields: [
-                { field: 'name', type: 'text', required: true }
-            ],
-            record: { 
-                name    : 'Untitled',
-                document_type: 'document',
-                project_id: g.project_id,
-                parent_id: -1,
-                predecessor_id: -1
+    remove_form('add_document');
+    $().w2form({
+        name: 'add_document',
+        style: 'border: 0px; background-color: transparent;',
+        url: '/set/document',
+        formHTML: 
+            '<div class="w2ui-page page-0">'+
+            '    <div class="w2ui-field">'+
+            '        <label>Title:</label>'+
+            '        <div>'+
+            '           <input name="name" type="text" maxlength="200" style="width: 250px"/>'+
+            '        </div>'+
+            '    </div>'+
+            '</div>'+
+            '<div class="w2ui-buttons">'+
+            '    <button class="w2ui-btn" name="reset">Reset</button>'+
+            '    <button class="w2ui-btn" name="ok">OK</button>'+
+            '</div>',
+        fields: [
+            { field: 'name', type: 'text', required: true }
+        ],
+        record: { 
+            name    : 'Untitled',
+            document_type: 'document',
+            project_id: g.project_id,
+            parent_id: -1,
+            predecessor_id: -1
+        },
+        actions: {
+            "ok": function () { 
+              if (g.sidebar_target != null && g.sidebar_target.startsWith('document_')) {
+                this.record.parent_id = g.documents[g.sidebar_target.substring(9)].document.id;
+              }
+              this.save(function (data) {
+                if (data.status == 'success') {
+                    get_documents();
+                    $().w2popup('close');
+                }
+                else {
+                  show_error(data.status, data.message);
+                }
+              }) 
             },
-            actions: {
-                "ok": function () { 
-                  if (g.sidebar_target != null && g.sidebar_target.startsWith('document_')) {
-                    this.record.parent_id = g.documents[g.sidebar_target.substring(9)].document.id;
-                  }
-                  this.save(function (data) {
-                    if (data.status == 'success') {
-                        get_documents();
-                        $().w2popup('close');
-                    }
-                    else {
-                      show_error(data.status, data.message);
-                    }
-                  }) 
-                },
-                "reset": function () { this.clear(); }
-            }
-        });
-    }
+            "reset": function () { this.clear(); }
+        }
+    });
     $().w2popup('open', {
         title   : 'Add document',
         body    : '<div id="form" style="width: 100%; height: 100%;"></div>',
