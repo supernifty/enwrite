@@ -1401,7 +1401,6 @@ var
         },
         actions: {
             "ok": function () { 
-              alert("enter");
               if (g.sidebar_target != null && g.sidebar_target.startsWith('document_')) {
                 this.record.parent_id = g.documents[g.sidebar_target.substring(9)].document.id;
               }
