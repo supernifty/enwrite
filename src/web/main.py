@@ -313,7 +313,7 @@ def search():
     q = flask.request.form['q']
     if flask.request.form['project_id'] is None:
         raise query.QueryException("Required parameter project_id not provided")
-    return flask.jsonify(q=q, documents=query.summary(query.search(db(), authenticator.user_id(flask.session), project_id, q)))
+    return flask.jsonify(status="success", q=q, documents=query.summary(query.search(db(), authenticator.user_id(flask.session), project_id, q)))
 
 @app.route("/search_recent", methods=['POST'])
 def search_recent():
@@ -323,7 +323,7 @@ def search_recent():
     project_id = flask.request.form['project_id']
     if flask.request.form['project_id'] is None:
         raise query.QueryException("Required parameter project_id not provided")
-    return flask.jsonify(q='Recently Updated', documents=query.summary(query.search_recent(db(), authenticator.user_id(flask.session), project_id)))
+    return flask.jsonify(status="success", q='Recently Updated', documents=query.summary(query.search_recent(db(), authenticator.user_id(flask.session), project_id)))
 
 @app.route("/render/latex", methods=['POST'])
 def render():

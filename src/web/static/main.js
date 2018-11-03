@@ -823,6 +823,9 @@ var
                     get_projects();
                     $().w2popup('close');
                 }
+                else {
+                    show_error(data.status, data.message);
+                }
               }) 
             },
             "reset": function () { this.clear(); }
@@ -890,6 +893,9 @@ var
                 if (data.status == 'success') {
                     get_projects();
                     $().w2popup('close');
+                }
+                else {
+                    show_error(data.status, data.message);
                 }
               }) 
             },
@@ -1055,6 +1061,9 @@ var
                       get_documents();
                       $().w2popup('close');
                   }
+                  else {
+                      show_error(data.status, data.message);
+                  }
                 }) 
               },
               "reset": function () { this.clear(); }
@@ -1163,14 +1172,19 @@ var
   }
 
   show_search = function(data) {
-    // find or create search tab
-    var target_id = 'tab_search',
-        existing = find_tab(target_id);
-    if (existing == null) {
-      w2ui.main_layout_main_tabs.add({ id: target_id, text: 'Search', closable: true });
+    if (data.status == 'success') {
+      // find or create search tab
+      var target_id = 'tab_search',
+          existing = find_tab(target_id);
+      if (existing == null) {
+        w2ui.main_layout_main_tabs.add({ id: target_id, text: 'Search', closable: true });
+      }
+      g.tab_cache[target_id] = { 'document_type': 'search', 'documents': data.documents, 'unsaved': false, 'q': data.q };
+      w2ui.main_layout_main_tabs.click(target_id); // select tab to display content
     }
-    g.tab_cache[target_id] = { 'document_type': 'search', 'documents': data.documents, 'unsaved': false, 'q': data.q };
-    w2ui.main_layout_main_tabs.click(target_id); // select tab to display content
+    else {
+      show_error(data.status, data.message);
+    }
   },
 
   run_queue = function() {
@@ -1325,6 +1339,9 @@ var
                       get_documents();
                       $().w2popup('close');
                   }
+                  else {
+                      show_error(data.status, data.message);
+                  }
                 }) 
               },
               "reset": function () { this.clear(); }
@@ -1384,6 +1401,7 @@ var
         },
         actions: {
             "ok": function () { 
+              alert("enter");
               if (g.sidebar_target != null && g.sidebar_target.startsWith('document_')) {
                 this.record.parent_id = g.documents[g.sidebar_target.substring(9)].document.id;
               }

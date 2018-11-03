@@ -20,6 +20,7 @@ class NoAuth (object):
         self.google = types.SimpleNamespace(tokengetter=dummy)
 
     def is_auth(self, session):
+        #return False
         return 'user_id' in session
 
     def username(self, session):
