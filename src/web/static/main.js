@@ -208,6 +208,59 @@ var
     }
   },
 
+  update_rating = function(rating) {
+    $.ajax({
+    type: "POST",
+    url: '/set/document_r', 
+    data: {
+      project_id: g.project_id,
+      id: g.document_target,
+      rating: rating
+    }
+    }).done(updated_rating)
+      .fail(ajax_fail);
+  },
+
+  updated_rating = function(data) {
+    if ('status' in data && data.status != 'success') {
+      show_error(data.status, data.message);
+      return;
+    }
+    // successfully updated
+    // get_documents(); // updates everything
+    g.tab_cache['tab_' + g.document_target].rating = data.rating; // update cache
+    update_document_details();
+ },
+
+  get_rating_ro = function(rating) {
+    var stars = '';
+    for (var idx=0; idx<5; idx++) {
+      if (idx < rating) {
+        stars += '<i class="fas fa-star"></i>';
+      }
+      else {
+        stars += '<i class="far fa-star"></i>';
+      }
+    }
+    return '<span title="' + rating + '/5">' + stars + '</span>';
+  },
+
+  get_rating = function(rating) {
+    var text = (rating == 0 ? 'unrated' : rating + "/5"),
+      star,
+      stars = '';
+    for (var idx=0; idx<5; idx++) {
+      if (idx < rating) {
+        star = '<i class="fas fa-star"></i>';
+      }
+      else {
+        star = '<i class="far fa-star"></i>';
+      }
+      stars += '<a href="#" onclick="return update_rating(' + (idx+1) + ')">' + star + '</a>';
+    }
+    return '<span title="' + text + '">' + stars + '</span>';
+  },
+
   update_document_details = function() {
     var current = g.tab_cache['tab_' + g.document_target], 
       attachment_list = '',
@@ -221,6 +274,7 @@ var
     summary_list += 
       '<strong>Location:</strong> ' + get_location(current.path) + '<br/>' +
       '<strong>Name:</strong> ' + escape_html(current.name) + '<br/>' +
+      '<strong>Rating:</strong> ' + get_rating(current.rating) + '<br/>' +
       '<strong>Updated</strong> ' + moment(current.updated).fromNow() + '<br/>';
 
     // write to view
@@ -298,7 +352,7 @@ var
         '</div><div id="search_grid" style="width: 100%;" class="w2ui-grid-light"></div>',
         records = [];
       for (var document of current) {
-        records.push({'recid': document.id, 'name': document.name, 'type': document.document_type, 'updated': moment(document.updated).format()})
+        records.push({'recid': document.id, 'name': document.name, 'type': document.document_type, 'updated': moment(document.updated).format(), 'rating': document.rating})
       }
       w2ui.main_layout.content('main', content); // main content
       w2ui.main_layout.content('right', '');
@@ -316,6 +370,10 @@ var
         }, {
           field: 'updated', caption: 'Updated', size: '20%', sortable: true, render: function(record) {
             return moment(record.updated).fromNow();
+          }
+        }, {
+          field: 'rating', caption: 'Rating', size: '10%', sortable: true, render: function(record) {
+            return get_rating_ro(record.rating);
           }
         } ],
         records: records
@@ -561,6 +619,7 @@ var
       case "menu_document:save_document": return save_current_document();
       case "menu_document:save_all": return save_all();
       case "menu_document:recent_documents": return recent_documents();
+      case "menu_document:rated_documents": return rated_documents();
       case "menu_about": location.href = "/about"; return true;
       case "menu_user": return true;
       case "menu_user:menu_autosave": return toggle_autosave();
@@ -980,7 +1039,8 @@ var
       { text: 'Save', id: 'save_document' },
       { text: 'Save All', id: 'save_all' },
       { text: '--', id: 'document_separator' },
-      { text: 'Recently Updated', id: 'recent_documents' }
+      { text: 'Recently Updated', id: 'recent_documents' },
+      { text: 'Top Rated', id: 'rated_documents' }
     ]});
 
     w2ui.main_toolbar.insert('menu_right', { type: 'html', id: 'menu_search', html: function(item) {
@@ -1152,6 +1212,18 @@ var
       url: '/search', 
       data: {
         q: $("input[name='q']").val(),
+        project_id: g.project_id
+      }})
+      .done(show_search)
+      .fail(ajax_fail);
+    return false;
+  },
+
+  rated_documents = function() {
+    $.ajax({
+      type: "POST",
+      url: '/search_rated', 
+      data: {
         project_id: g.project_id
       }})
       .done(show_search)

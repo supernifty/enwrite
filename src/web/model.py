@@ -88,7 +88,7 @@ class Document(Base):
   name = sqlalchemy.Column(sqlalchemy.String(250), nullable=False)
   document_type = sqlalchemy.Column(sqlalchemy.String(8), nullable=False) # folder, document
   renderer = sqlalchemy.Column(sqlalchemy.String(8), nullable=False, default='Markdown') # latex, markdown
-  #tags = sqlalchemy.Column(sqlalchemy.SmallInteger, nullable=False, default=0) # 1=star
+  rating = sqlalchemy.Column(sqlalchemy.SmallInteger, nullable=False, default=0) # usefulness 1-5 (0=unrated)
   content = sqlalchemy.Column(sqlalchemy.Text, nullable=False, default='')
 
   # project for this document
@@ -129,16 +129,16 @@ class Document(Base):
     '''
       summary document info
     '''
-    return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'renderer': self.renderer, 'updated': self.updated, 'attachments': [item.detail() for item in self.document_attachments]} #, 'content': self.content}
+    return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'rating': self.rating, 'renderer': self.renderer, 'updated': self.updated, 'attachments': [item.detail() for item in self.document_attachments]} #, 'content': self.content}
 
   def detail(self):
     '''
       full document info
     '''
-    return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'content': self.content, 'renderer': self.renderer, 'updated': self.updated, 'attachments': [item.detail() for item in self.document_attachments], 'path': [{'id': item.id, 'name': item.name} for item in self.path()]}
+    return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'content': self.content, 'rating': self.rating, 'renderer': self.renderer, 'updated': self.updated, 'attachments': [item.detail() for item in self.document_attachments], 'path': [{'id': item.id, 'name': item.name} for item in self.path()]}
 
   def export(self):
-    return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'content': self.content, 'renderer': self.renderer, 'updated': self.updated, 'attachments': [item.detail() for item in self.document_attachments], 'parent_id': self.parent_id, 'predecessor_id': self.predecessor_id}
+    return {'id': self.id, 'name': self.name, 'document_type': self.document_type, 'content': self.content, 'rating': self.rating, 'renderer': self.renderer, 'updated': self.updated, 'attachments': [item.detail() for item in self.document_attachments], 'parent_id': self.parent_id, 'predecessor_id': self.predecessor_id}
 
 class Attachment(Base):
   __tablename__ = 'attachment'

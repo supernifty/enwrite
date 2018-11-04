@@ -136,6 +136,14 @@ def search_recent(db, user_id, project_id):
 
   return db.query(model.Document).filter(model.Document.project == project).order_by(model.Document.updated.desc()).limit(SEARCH_LIMIT)
  
+def search_rated(db, user_id, project_id):
+  user = db.query(model.User).filter(model.User.id == user_id).first()
+  if user is None:
+    raise QueryException("Authentication error")
+  project, access = get_project_access(db, project_id, user_id, ACCESS_READ)
+
+  return db.query(model.Document).filter(model.Document.project == project).order_by(model.Document.rating.desc()).limit(SEARCH_LIMIT)
+ 
 def make_tree(root, documents):
   result = []
   current = root
@@ -423,6 +431,17 @@ def update_document_properties(db, user_id, project_id, document_id, name, rende
   document.name = name
   document.renderer = renderer
   # TODO if folder, update all sub-items with new renderer
+  db.commit()
+
+def update_document_rating(db, user_id, project_id, document_id, rating):
+  user = db.query(model.User).filter(model.User.id == user_id).first()
+  if user is None:
+    raise QueryException("Authentication failed")
+
+  project, access = get_project_access(db, project_id, user_id, ACCESS_WRITE)
+
+  document = db.query(model.Document).filter((model.Document.id == document_id) & (model.Document.project_id == project_id)).first()
+  document.rating = rating
   db.commit()
 
 def move_document(db, user_id, project_id, document_id, target_document_id):

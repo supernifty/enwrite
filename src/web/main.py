@@ -198,6 +198,13 @@ def set_data(category):
             query.update_document_properties(db(), authenticator.user_id(flask.session), req['record']['project_id'], req['record']['document_id'], req['record']['name'], req['record']['renderer'])
             return flask.jsonify(status="success")
 
+        if category == 'document_r': # rate document
+            document_id = flask.request.form['id']
+            project_id = flask.request.form['project_id']
+            rating = int(flask.request.form['rating'])
+            query.update_document_rating(db(), authenticator.user_id(flask.session), project_id, document_id, rating)
+            return flask.jsonify(status="success", rating=rating)
+ 
         if category == 'document_m': # move document
             document_id = flask.request.form['id']
             project_id = flask.request.form['project_id']
@@ -324,6 +331,16 @@ def search_recent():
     if flask.request.form['project_id'] is None:
         raise query.QueryException("Required parameter project_id not provided")
     return flask.jsonify(status="success", q='Recently Updated', documents=query.summary(query.search_recent(db(), authenticator.user_id(flask.session), project_id)))
+
+@app.route("/search_rated", methods=['POST'])
+def search_rated():
+    if not authenticator.is_auth(flask.session):
+        return flask.jsonify(status="auth", message="User is not authenticated")
+
+    project_id = flask.request.form['project_id']
+    if flask.request.form['project_id'] is None:
+        raise query.QueryException("Required parameter project_id not provided")
+    return flask.jsonify(status="success", q='Top Rated', documents=query.summary(query.search_rated(db(), authenticator.user_id(flask.session), project_id)))
 
 @app.route("/render/latex", methods=['POST'])
 def render():
