@@ -263,7 +263,7 @@ def import_project(db, user_id, name, data, attachment_data):
     if item['id'] not in id_map: 
       id_map[item['id']] = model.generate_id()
     if (item['parent_id'] is None or item['parent_id'] in ids_added) and (item['predecessor_id'] is None or item['predecessor_id'] in ids_added):
-      document = model.Document(project=project, id=id_map.get(item['id']), name=item['name'], parent_id=id_map.get(item['parent_id']), predecessor_id=id_map.get(item['predecessor_id']), document_type=item['document_type'], renderer=item['renderer'], content=item['content'])
+      document = model.Document(project=project, id=id_map.get(item['id']), name=item['name'], parent_id=id_map.get(item['parent_id']), predecessor_id=id_map.get(item['predecessor_id']), document_type=item['document_type'], renderer=item['renderer'], content=item['content'], updated=item['updated'])
       db.add(document)
       stats['documents'] += 1
       ids_added.add(item['id'])
