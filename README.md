@@ -30,14 +30,15 @@ python main.py
 # The following is implemented:
 * Markdown and Latex support
 * Math formula
+* Attachments
+* Indexing, searching
 
 # Roadmap
 We hope to add the following:
 * Collaboration
 * Reference management
 * Checkpointing, restore
-* Attachments, notes
-* Indexing, searching
+* Notes
 
 # Dependencies
 * jquery

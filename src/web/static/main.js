@@ -154,6 +154,12 @@ var
             //id: g.documents[g.document_target].document.id
             id: g.document_target
         },
+        onSave: function(event) {
+          data = JSON.parse(event.xhr.responseText);
+          if (data.status != 'success') {
+             show_error(data.status, data.message);
+          }
+        },
         actions: {
             "ok": function () { 
               this.save(function (data) {
@@ -793,6 +799,12 @@ var
               access: 'r',
               project_id: g.project_id
           },
+          onSave: function(event) {
+            data = JSON.parse(event.xhr.responseText);
+            if (data.status != 'success') {
+               show_error(data.status, data.message);
+            }
+          },
           actions: {
               "ok": function () { 
                 this.save(function (data) {
@@ -875,6 +887,12 @@ var
             name    : 'Untitled',
             renderer: 'Markdown'
         },
+        onSave: function(event) {
+          data = JSON.parse(event.xhr.responseText);
+          if (data.status != 'success') {
+             show_error(data.status, data.message);
+          }
+        },
         actions: {
             "ok": function () { 
               this.save(function (data) {
@@ -945,6 +963,12 @@ var
         record: { 
             name: 'Imported Project',
             project_id: g.project_id
+        },
+        onSave: function(event) {
+          data = JSON.parse(event.xhr.responseText);
+          if (data.status != 'success') {
+             show_error(data.status, data.message);
+          }
         },
         actions: {
             "ok": function () { 
@@ -1111,8 +1135,14 @@ var
               parent_id: -1,
               predecessor_id: -1
           },
+          onSave: function(event) {
+            data = JSON.parse(event.xhr.responseText);
+            if (data.status != 'success') {
+               show_error(data.status, data.message);
+            }
+          },
           actions: {
-              "ok": function () { 
+              "ok": function (event) {
                 if (g.sidebar_target != null && g.sidebar_target.startsWith('document_')) {
                   this.record.parent_id = g.documents[g.sidebar_target.substring(9)].document.id;
                 }
@@ -1124,7 +1154,7 @@ var
                   else {
                       show_error(data.status, data.message);
                   }
-                }) 
+                });
               },
               "reset": function () { this.clear(); }
           }
@@ -1404,6 +1434,12 @@ var
               project_id: g.project_id,
               document_id: current.document.id
           },
+          onSave: function(event) {
+            data = JSON.parse(event.xhr.responseText);
+            if (data.status != 'success') {
+               show_error(data.status, data.message);
+            }
+          },
           actions: {
               "ok": function () { 
                 this.save(function (data) {
@@ -1470,6 +1506,12 @@ var
             project_id: g.project_id,
             parent_id: -1,
             predecessor_id: -1
+        },
+        onSave: function(event) {
+          data = JSON.parse(event.xhr.responseText);
+          if (data.status != 'success') {
+             show_error(data.status, data.message);
+          }
         },
         actions: {
             "ok": function () { 
