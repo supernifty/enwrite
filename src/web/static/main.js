@@ -273,7 +273,7 @@ var
       summary_list = '';
     // attachments
     for (var attachment in current.attachments) {
-      attachment_list += '<a target="_blank" href="/get/attachment?project_id=' + g.project_id + '&id=' + current.attachments[attachment].id + '">' + escape_html(current.attachments[attachment].name) + '</a>&nbsp;<a href="" onclick="return delete_attachment(\'' + current.attachments[attachment].id + '\')"><i class="fas fa-trash"></i></a><br/>';
+      attachment_list += '<a target="_blank" href="/get/attachment?project_id=' + g.project_id + '&id=' + current.attachments[attachment].id + '">' + escape_html(current.attachments[attachment].name) + '</a>&nbsp;<a href="" onclick="return add_inline_attachment(\'' + escape_html(current.attachments[attachment].name) + '\', \'' + current.attachments[attachment].id + '\')"><i class="fas fa-plus" title="add to document"></i></a>&nbsp;<a href="" onclick="return delete_attachment(\'' + current.attachments[attachment].id + '\')"><i class="fas fa-trash" title="delete attachment"></i></a><br/>';
     }
 
     // summary information
@@ -1206,6 +1206,26 @@ var
     else {
       show_error(data.status, data.message);
     }
+  },
+
+  paste_into_editable = function(text) {
+    var pos = $('#editable_content').prop('selectionStart'),
+      	old = $('#editable_content').val(),
+        before = old.substring(0, pos),
+        after = old.substring(pos, old.length);
+
+    $('#editable_content').val(before + text + after);
+    content_changed(); // so changes are saved
+    // if previewing...
+    if (g.previewing_document) {
+      preview_document();
+    }
+  },
+
+  add_inline_attachment = function(escaped_name, attachment_id) {
+    var text = '![' + escaped_name + '](/get/attachment?project_id=' + g.project_id + '&id=' + attachment_id + ')';
+    paste_into_editable(text);    
+    return false;
   },
 
   delete_attachment = function(attachment_id) {
