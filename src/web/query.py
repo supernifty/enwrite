@@ -332,6 +332,8 @@ def add_document(db, user_id, project_id, document_type, name, parent_id, predec
     first.predecessor_id = document.id
   db.commit()
 
+  return document.parent_id
+
 def add_attachments(db, user_id, project_id, document_id, attachments):
   user = db.query(model.User).filter(model.User.id == user_id).first()
   if user is None:
@@ -455,6 +457,7 @@ def move_document(db, user_id, project_id, document_id, target_document_id):
   project, access = get_project_access(db, project_id, user_id, ACCESS_WRITE)
 
   document_to_move = db.query(model.Document).filter((model.Document.id == document_id) & (model.Document.project_id == project_id)).first()
+  parent_id_prev = document_to_move.parent_id
 
   if target_document_id == 'root':
     # was anything pointing to the document? if so, it should now point to the document's predecessor
@@ -471,7 +474,7 @@ def move_document(db, user_id, project_id, document_id, target_document_id):
     document_to_move.predecessor = None
 
     db.commit()
-    return
+    return (parent_id_prev, None)
 
   target_document = db.query(model.Document).filter((model.Document.id == target_document_id) & (model.Document.project_id == project_id)).first()
 
@@ -491,6 +494,8 @@ def move_document(db, user_id, project_id, document_id, target_document_id):
   document_to_move.predecessor = target_document
 
   db.commit()
+
+  return (parent_id_prev, document_to_move.parent_id)
 
 ###
 def delete_project(db, user_id, project_id):
@@ -528,6 +533,8 @@ def delete_document(db, user_id, project_id, document_id):
   
   db.delete(document)
   db.commit()
+
+  return document.parent_id
 
 def delete_attachment(db, user_id, project_id, attachment_id):
   user = db.query(model.User).filter(model.User.id == user_id).first()

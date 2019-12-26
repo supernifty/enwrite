@@ -1,4 +1,6 @@
 var
+  DEBUG = false,
+
   g = {
     'sidebar_target': null,
     'document_target': null,
@@ -1093,7 +1095,7 @@ var
   load_project = function() {
     remove_sidebar_nodes();
     w2ui.main_sidebar.refresh();
-    set_status('Opened project "' + g.project_name + '"', true);
+    set_status('Opening project "' + g.project_name + '"...', true);
     g.project_show_documents = true; // so we can load session
     get_documents();
   },
@@ -1148,7 +1150,7 @@ var
                 }
                 this.save(function (data) {
                   if (data.status == 'success') {
-                      get_documents();
+                      get_documents(data.parent_id);
                       $().w2popup('close');
                   }
                   else {
@@ -1200,7 +1202,7 @@ var
 
   deleted_document = function(data) {
     if (data.status == 'success') {
-      get_documents();
+      get_documents(data.parent_id);
       set_status('Deleted item.');
     }
     else {
@@ -1540,7 +1542,7 @@ var
               }
               this.save(function (data) {
                 if (data.status == 'success') {
-                    get_documents();
+                    get_documents(data.parent_id);
                     $().w2popup('close');
                 }
                 else {
@@ -1574,11 +1576,11 @@ var
     });
   },
 
-  get_documents = function() {
+  get_documents = function(parent_id) {
     $.ajax({ 
       url: "/get/documents?project_id=" + g.project_id
     })
-    .done(show_documents)
+    .done(show_documents(parent_id))
     .fail(ajax_fail);
   },
 
@@ -1591,6 +1593,8 @@ var
     }
   },
 
+  // makes a big tree starting from root if no parent_id
+  // documents is a tree of items
   make_tree = function(documents) {
     var result = [], document_id;
     for (var idx in documents) {
@@ -1606,17 +1610,43 @@ var
     return result;
   },
 
-  show_documents = function(data) {
-    remove_sidebar_nodes();
-    g.documents = [];
-    w2ui.main_sidebar.add(make_tree(data.documents)); 
-    if (data.documents.length == 0) {
-      w2ui.main_sidebar.add({id: 'placeholder', text: 'No documents.'});
-    }
-    w2ui.main_sidebar.refresh();
-    if (g.project_show_documents) {
-      g.project_show_documents = false;
-      open_session_documents();
+  // if parent_id is not none, only need to update tree from there down
+  show_documents = function(parent_id) { 
+    return function(data) {
+      var queue = [], d;
+      // if (parent_id) {
+      if (parent_id) {
+        remove_sidebar_nodes('document_' + parent_id);
+        // find root
+        queue = data.documents.slice();
+        while (queue.length > 0) {
+          d = queue.pop();
+          if (d.document.id == parent_id) {
+            w2ui.main_sidebar.add('document_' + parent_id, make_tree(d.children)); 
+            break;
+          }
+          else {
+            queue.push.apply(queue, d.children.slice());
+          }
+        }
+        w2ui.main_sidebar.refresh('document_' + parent_id);
+      }
+      else {
+        remove_sidebar_nodes();
+        g.documents = [];
+        w2ui.main_sidebar.add(make_tree(data.documents)); 
+        w2ui.main_sidebar.refresh();
+      }
+      // now redraw
+      if (data.documents.length == 0) {
+        w2ui.main_sidebar.add({id: 'placeholder', text: 'No documents.'});
+        w2ui.main_sidebar.refresh();
+      }
+      if (g.project_show_documents) {
+        g.project_show_documents = false;
+        open_session_documents();
+      }
+      set_status('Ready')
     }
   },
 
@@ -1673,6 +1703,7 @@ var
     }
   }, 
 
+  // post move
   dropped = function(data) {
     if (data.status == 'success') {
       get_documents();
@@ -1683,10 +1714,22 @@ var
     }
   },
 
-  remove_sidebar_nodes = function() {
-    var nd = []; 
-    for (var i in w2ui.main_sidebar.nodes) nd.push(w2ui.main_sidebar.nodes[i].id);
-    w2ui.main_sidebar.remove.apply(w2ui.main_sidebar, nd);
+  remove_sidebar_nodes = function(root_id) {
+    var nd = [], root, current, queue = []; 
+    if (root_id) {
+      root = w2ui.main_sidebar.get(root_id);
+      queue = root.nodes;
+      while (queue.length > 0) {
+        current = queue.pop(); // this seems to actually remove the node
+        delete g.documents[current.id.substr(9)];
+        nd.push(current);
+        queue.push.apply(queue, current.nodes)
+      }
+    }
+    else {
+      for (var i in w2ui.main_sidebar.nodes) nd.push(w2ui.main_sidebar.nodes[i].id);
+      w2ui.main_sidebar.remove.apply(w2ui.main_sidebar, nd);
+    }
   },
 
   /***** session *****/
@@ -1756,6 +1799,12 @@ var
     $temp.val(value).select();
     document.execCommand("copy");
     $temp.remove();
+  },
+
+  debug = function(m) {
+    if (DEBUG) {
+      console.log(Date.now() + ' ' + m);
+    }
   },
 
   escape_html = function (string) {
