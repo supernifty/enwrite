@@ -177,8 +177,8 @@ def set_data(category):
 
         if category == 'document': # add folder/document
             req = json.loads(flask.request.form['request'])
-            parent_id = query.add_document(db(), authenticator.user_id(flask.session), req['record']['project_id'], req['record']['document_type'], req['record']['name'], req['record']['parent_id'], req['record']['predecessor_id'])
-            return flask.jsonify(status="success", parent_id=parent_id)
+            document = query.add_document(db(), authenticator.user_id(flask.session), req['record']['project_id'], req['record']['document_type'], req['record']['name'], req['record']['parent_id'], req['record']['predecessor_id'])
+            return flask.jsonify(status="success", parent_id=document.parent_id, document_id=document.id)
      
         if category == 'document_d': # delete document
             document_id = flask.request.form['id']

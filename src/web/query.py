@@ -332,7 +332,7 @@ def add_document(db, user_id, project_id, document_type, name, parent_id, predec
     first.predecessor_id = document.id
   db.commit()
 
-  return document.parent_id
+  return document
 
 def add_attachments(db, user_id, project_id, document_id, attachments):
   user = db.query(model.User).filter(model.User.id == user_id).first()

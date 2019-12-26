@@ -1543,6 +1543,10 @@ var
               this.save(function (data) {
                 if (data.status == 'success') {
                     get_documents(data.parent_id);
+                    g.open[data.document_id] = 1; // add to session
+                    save_session();
+                    g.project_show_documents = true; // so we can load session
+                    // open document
                     $().w2popup('close');
                 }
                 else {
@@ -1637,6 +1641,7 @@ var
         w2ui.main_sidebar.add(make_tree(data.documents)); 
         w2ui.main_sidebar.refresh();
       }
+
       // now redraw
       if (data.documents.length == 0) {
         w2ui.main_sidebar.add({id: 'placeholder', text: 'No documents.'});
