@@ -210,7 +210,7 @@ def set_data(category):
             project_id = flask.request.form['project_id']
             target_id = flask.request.form['target_id']
             parents = query.move_document(db(), authenticator.user_id(flask.session), project_id, document_id, target_id)
-            return flask.jsonify(status="success")
+            return flask.jsonify(status="success", parent_id_from=parents[0], parent_id_to=parents[1])
 
         if category == 'attachment': # add attachment
             req = json.loads(flask.request.form['request'])

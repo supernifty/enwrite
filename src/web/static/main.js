@@ -1580,11 +1580,11 @@ var
     });
   },
 
-  get_documents = function(parent_id) {
+  get_documents = function(parent_id_to, parent_id_from) {
     $.ajax({ 
       url: "/get/documents?project_id=" + g.project_id
     })
-    .done(show_documents(parent_id))
+    .done(show_documents(parent_id_to, parent_id_from))
     .fail(ajax_fail);
   },
 
@@ -1615,27 +1615,45 @@ var
   },
 
   // if parent_id is not none, only need to update tree from there down
-  show_documents = function(parent_id) { 
+  show_documents = function(parent_id_to, parent_id_from) { 
     return function(data) {
       var queue = [], d;
-      // if (parent_id) {
-      if (parent_id) {
-        remove_sidebar_nodes('document_' + parent_id);
-        // find root
-        queue = data.documents.slice();
-        while (queue.length > 0) {
-          d = queue.pop();
-          if (d.document.id == parent_id) {
-            w2ui.main_sidebar.add('document_' + parent_id, make_tree(d.children)); 
-            break;
+      // parent_id: undefined=n/a, null=root, other=subtree
+      if (parent_id_to !== null && parent_id_from !== null && !(parent_id_to === undefined && parent_id_from === undefined)) { // can do partial
+        if (parent_id_from !== undefined && parent_id_from != parent_id_to) {
+          remove_sidebar_nodes('document_' + parent_id_from);
+          // find root
+          queue = data.documents.slice();
+          while (queue.length > 0) {
+            d = queue.pop();
+            if (d.document.id == parent_id_from) {
+              w2ui.main_sidebar.add('document_' + parent_id_from, make_tree(d.children)); 
+              break;
+            }
+            else {
+              queue.push.apply(queue, d.children.slice());
+            }
           }
-          else {
-            queue.push.apply(queue, d.children.slice());
-          }
+          w2ui.main_sidebar.refresh('document_' + parent_id_from);
         }
-        w2ui.main_sidebar.refresh('document_' + parent_id);
+        if (parent_id_to !== undefined) {
+          remove_sidebar_nodes('document_' + parent_id_to);
+          // find root
+          queue = data.documents.slice();
+          while (queue.length > 0) {
+            d = queue.pop();
+            if (d.document.id == parent_id_to) {
+              w2ui.main_sidebar.add('document_' + parent_id_to, make_tree(d.children)); 
+              break;
+            }
+            else {
+              queue.push.apply(queue, d.children.slice());
+            }
+          }
+          w2ui.main_sidebar.refresh('document_' + parent_id_to);
+        }
       }
-      else {
+      else { // do everything
         remove_sidebar_nodes();
         g.documents = [];
         w2ui.main_sidebar.add(make_tree(data.documents)); 
@@ -1711,7 +1729,7 @@ var
   // post move
   dropped = function(data) {
     if (data.status == 'success') {
-      get_documents();
+      get_documents(data.parent_id_to, data.parent_id_from);
       set_status('Document moved.');
     }
     else {
