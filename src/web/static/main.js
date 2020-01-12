@@ -322,6 +322,7 @@ var
     else if (selected_document.document_type == 'document') {
       if (g.document_target != ev.target.substr(4)) { // changed selection 
         $("#editable_content").off('change keyup paste mouseup', content_changed);
+        $('#editable_content').off('mouseleave', content_leave);
   
         // save changes to old tab (to local cache)
         var current;
@@ -331,10 +332,13 @@ var
         }
   
         g.document_target = ev.target.substr(4);
+        g.selection_start = -1;
+        g.selection_end = -1;
         w2ui.main_layout.content('main', '<textarea id="editable_content"></textarea><div id="preview_content" style="display: none"></div>')
         current = g.tab_cache['tab_' + g.document_target];
         $('#editable_content').val(current.content);
         $('#editable_content').on('change keyup paste mouseup', content_changed);
+        $('#editable_content').on('mouseleave', content_leave);
         preview_document();
         update_document_details(); // right tab
       }
@@ -345,6 +349,7 @@ var
     else if (selected_document.document_type == 'search') { 
       if (g.document_target != ev.target.substr(4)) { // changed selection 
         $("#editable_content").off('change keyup paste mouseup', content_changed);
+        $('#editable_content').off('mouseleave', content_leave);
   
         // save changes to old tab
         var current;
@@ -408,6 +413,11 @@ var
       }
       g.autosave_timer = setTimeout(autosave_all, AUTOSAVE_TIMER);
     }
+  },
+
+  content_leave = function(ev) {
+    g.selection_start = $('#editable_content').prop('selectionStart');
+    g.selection_end = $('#editable_content').prop('selectionEnd');
   },
 
   autosave_all = function() {
@@ -628,6 +638,8 @@ var
       case "menu_document:save_all": return save_all();
       case "menu_document:recent_documents": return recent_documents();
       case "menu_document:rated_documents": return rated_documents();
+      case "menu_edit": return true;
+      case "menu_edit:edit_bold": return edit_bold();
       case "menu_about": location.href = "/about"; return true;
       case "menu_user": return true;
       case "menu_user:menu_autosave": return toggle_autosave();
@@ -1069,6 +1081,10 @@ var
       { text: 'Top Rated', id: 'rated_documents' }
     ]});
 
+    w2ui.main_toolbar.insert('menu_last', { type: 'menu', id: 'menu_edit', caption: 'Edit', img: 'icon-page', items: [
+      { text: 'Bold selection', id: 'edit_bold' }
+    ]});
+
     w2ui.main_toolbar.insert('menu_right', { type: 'html', id: 'menu_search', html: function(item) {
       return '<div style="color: black">' +
         '<form onsubmit="return search_project()"><input id="search" type="search" name="q" placeholder="Search"/>' +
@@ -1207,6 +1223,25 @@ var
     }
     else {
       show_error(data.status, data.message);
+    }
+  },
+
+  edit_bold = function() {
+    if (g.selection_start < 0 || g.selection_start > $('#editable_content').val().length || g.selection_end <= g.selection_start) {
+      return
+    }
+
+    var 
+      old = $('#editable_content').val(), // whole thing
+      before = old.substring(0, g.selection_start), // up to start
+      text = old.substring(g.selection_start, g.selection_end), 
+      after = old.substring(g.selection_end, old.length); 
+
+    $('#editable_content').val(before + '**' + text + '**' + after);
+    content_changed(); // so changes are saved
+    // if previewing...
+    if (g.previewing_document) {
+      preview_document();
     }
   },
 
