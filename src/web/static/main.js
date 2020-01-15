@@ -640,6 +640,7 @@ var
       case "menu_document:rated_documents": return rated_documents();
       case "menu_edit": return true;
       case "menu_edit:edit_bold": return edit_bold();
+      case "menu_edit:edit_strikethrough": return edit_strikethrough();
       case "menu_about": location.href = "/about"; return true;
       case "menu_user": return true;
       case "menu_user:menu_autosave": return toggle_autosave();
@@ -1082,7 +1083,8 @@ var
     ]});
 
     w2ui.main_toolbar.insert('menu_last', { type: 'menu', id: 'menu_edit', caption: 'Edit', img: 'icon-page', items: [
-      { text: 'Bold selection', id: 'edit_bold' }
+      { text: 'Bold selection', id: 'edit_bold' },
+      { text: 'Strikethrough selection', id: 'edit_strikethrough' }
     ]});
 
     w2ui.main_toolbar.insert('menu_right', { type: 'html', id: 'menu_search', html: function(item) {
@@ -1238,6 +1240,26 @@ var
       after = old.substring(g.selection_end, old.length); 
 
     $('#editable_content').val(before + '**' + text + '**' + after);
+    content_changed(); // so changes are saved
+    // if previewing...
+    if (g.previewing_document) {
+      preview_document();
+    }
+  },
+
+
+  edit_strikethrough = function() {
+    if (g.selection_start < 0 || g.selection_start > $('#editable_content').val().length || g.selection_end <= g.selection_start) {
+      return
+    }
+
+    var 
+      old = $('#editable_content').val(), // whole thing
+      before = old.substring(0, g.selection_start), // up to start
+      text = old.substring(g.selection_start, g.selection_end), 
+      after = old.substring(g.selection_end, old.length); 
+
+    $('#editable_content').val(before + '~~' + text + '~~' + after);
     content_changed(); // so changes are saved
     // if previewing...
     if (g.previewing_document) {
