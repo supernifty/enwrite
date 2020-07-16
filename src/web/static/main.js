@@ -641,6 +641,7 @@ var
       case "menu_edit": return true;
       case "menu_edit:edit_bold": return edit_bold();
       case "menu_edit:edit_strikethrough": return edit_strikethrough();
+      case "menu_edit:new_table": return new_table();
       case "menu_about": location.href = "/about"; return true;
       case "menu_user": return true;
       case "menu_user:menu_autosave": return toggle_autosave();
@@ -1084,7 +1085,9 @@ var
 
     w2ui.main_toolbar.insert('menu_last', { type: 'menu', id: 'menu_edit', caption: 'Edit', img: 'icon-page', items: [
       { text: 'Bold selection', id: 'edit_bold' },
-      { text: 'Strikethrough selection', id: 'edit_strikethrough' }
+      { text: 'Strikethrough selection', id: 'edit_strikethrough' },
+      { text: '--', id: 'document_separator' },
+      { text: 'New table', id: 'new_table' }
     ]});
 
     w2ui.main_toolbar.insert('menu_right', { type: 'html', id: 'menu_search', html: function(item) {
@@ -1279,6 +1282,11 @@ var
     if (g.previewing_document) {
       preview_document();
     }
+  },
+
+  new_table = function() {
+    var text = '\n\n|Heading1|Heading2|\n|-|-|\n|Value1|Value2|\n\n';
+    paste_into_editable(text);    
   },
 
   add_inline_attachment = function(escaped_name, attachment_id) {
