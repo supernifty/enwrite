@@ -1090,7 +1090,7 @@ var
       { text: 'Strikethrough selection', id: 'edit_strikethrough' },
       { text: 'Code  selection', id: 'edit_code' },
       { text: '--', id: 'document_separator' },
-      { text: 'New table', id: 'new_table' }
+      { text: 'New table', id: 'new_table' },
       { text: 'Link', id: 'edit_link' }
     ]});
 
