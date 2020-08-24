@@ -643,6 +643,7 @@ var
       case "menu_edit:edit_strikethrough": return edit_strikethrough();
       case "menu_edit:edit_code": return edit_code();
       case "menu_edit:new_table": return new_table();
+      case "menu_edit:edit_link": return edit_link();
       case "menu_about": location.href = "/about"; return true;
       case "menu_user": return true;
       case "menu_user:menu_autosave": return toggle_autosave();
@@ -1090,6 +1091,7 @@ var
       { text: 'Code  selection', id: 'edit_code' },
       { text: '--', id: 'document_separator' },
       { text: 'New table', id: 'new_table' }
+      { text: 'Link', id: 'edit_link' }
     ]});
 
     w2ui.main_toolbar.insert('menu_right', { type: 'html', id: 'menu_search', html: function(item) {
@@ -1307,6 +1309,25 @@ var
   new_table = function() {
     var text = '\n\n|Heading1|Heading2|\n|-|-|\n|Value1|Value2|\n\n';
     paste_into_editable(text);    
+  },
+
+  edit_link = function() {
+    if (g.selection_start < 0 || g.selection_start > $('#editable_content').val().length || g.selection_end <= g.selection_start) {
+      return
+    }
+
+    var
+      old = $('#editable_content').val(), // whole thing
+      before = old.substring(0, g.selection_start), // up to start
+      text = old.substring(g.selection_start, g.selection_end),
+      after = old.substring(g.selection_end, old.length);
+
+    $('#editable_content').val(before + '[Link name](' + text + ')' + after);
+    content_changed(); // so changes are saved
+    // if previewing...
+    if (g.previewing_document) {
+      preview_document();
+    }
   },
 
   add_inline_attachment = function(escaped_name, attachment_id) {
