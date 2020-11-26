@@ -14,6 +14,7 @@ import os
 import urllib.parse
 import zipfile
 
+from PIL import Image
 import sqlalchemy
 import flask_sqlalchemy
 
@@ -141,7 +142,18 @@ def get_data(category):
            if flask.request.args.get('id') is None:
                raise query.QueryException("Required parameter id not provided")
            result = query.attachment(db(), authenticator.user_id(flask.session), flask.request.args.get('project_id'), flask.request.args.get('id'))
-           response = flask.make_response(open(result['filename'], 'rb').read())
+           # post-processing
+           if flask.request.args.get('resize') is not None: # image resize
+             im = Image.open(result['filename'])
+             f = float(flask.request.args.get('resize'))
+             (width, height) = int(im.width * f), int(im.height * f)
+             im = im.resize((width, height))
+             with io.BytesIO() as output:
+               im.save(output, format=result['name'].split('.')[-1])
+               response = flask.make_response(output.getvalue())
+           else:
+             response = flask.make_response(open(result['filename'], 'rb').read())
+
            content_type = mimetypes.MimeTypes().guess_type(result['name'])[0]
            response.headers['Content-Type'] = content_type or 'application/octet-stream'
            response.headers['Content-Disposition'] = 'inline; filename="{}"'.format(result["name"].replace('"', '')) # TODO encode name
