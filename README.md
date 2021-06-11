@@ -47,3 +47,11 @@ We hope to add the following:
 * flask
 * postgres
 * docker
+
+# Notes and tricks
+
+* Images can be resized by adding e.g. &resize=0.5 to the attachment URL
+
+## Add Bulk
+
+Use markdown h1 headings as the documents to add, with directory structure to nominate a folder

@@ -631,6 +631,7 @@ var
       case "menu_add": return true;
       case "menu_add:add_folder": return add_folder();
       case "menu_add:add_document": return add_document();
+      case "menu_add:add_bulk": return add_bulk();
       case "menu_document": return true;
       case "menu_document:edit_document": return edit_document();
       case "menu_document:preview_document": return preview_document();
@@ -1072,7 +1073,8 @@ var
     w2ui.main_toolbar.get('menu_file').items.push({ text: 'Share Project ' + name, id: 'share_project', icon: 'fas fa-book'}); 
     w2ui.main_toolbar.insert('menu_last', { type: 'menu', text: 'Add', id: 'menu_add', icon: 'fas fa-plus', items: [
       { text: 'New Folder', id: 'add_folder', icon: 'fas fa-folder'},
-      { text: 'New Document', id: 'add_document', icon: 'fas fa-file'}
+      { text: 'New Document', id: 'add_document', icon: 'fas fa-file'},
+      { text: 'Upload Bulk', id: 'add_bulk', icon: 'fas fa-file-upload'}
     ]});
 
     w2ui.main_toolbar.insert('menu_last', { type: 'menu', id: 'menu_document', caption: 'Document', img: 'icon-page', items: [
@@ -1684,6 +1686,78 @@ var
             }
         }
     });
+  },
+
+  add_bulk = function() {
+    remove_form('add_bulk');
+    $().w2form({
+        name: 'add_bulk',
+        style: 'border: 0px; background-color: transparent;',
+        url: '/set/bulk',
+        formHTML: 
+            '<div class="w2ui-page page-0">'+
+            '    <div class="w2ui-field">'+
+            '        <label>Upload multiple documents as a single markdown:</label>'+
+            '        <div>'+
+            '           <input name="file" id="file" style="width: 400px"/>'+
+            '        </div>'+
+            '    </div>'+
+            '</div>'+
+            '<div class="w2ui-buttons">'+
+            '    <button class="w2ui-btn" name="reset">Reset</button>'+
+            '    <button class="w2ui-btn" name="ok">OK</button>'+
+            '</div>',
+        fields: [
+            { field: 'file', type: 'file', required: true }
+        ],
+        record: { 
+            project_id: g.project_id
+        },
+        onSave: function(event) {
+          data = JSON.parse(event.xhr.responseText);
+          if (data.status != 'success') {
+             show_error(data.status, data.message);
+          }
+        },
+        actions: {
+            "ok": function () { 
+              this.save(function (data) {
+                if (data.status == 'success') {
+                    get_documents(data.parent_id);
+                    save_session();
+                    g.project_show_documents = true; // so we can load session
+                    $().w2popup('close');
+                }
+                else {
+                  show_error(data.status, data.message);
+                }
+              }) 
+            },
+            "reset": function () { this.clear(); }
+        }
+    });
+    $().w2popup('open', {
+        title   : 'Add multiple documents',
+        body    : '<div id="form" style="width: 100%; height: 100%;"></div>',
+        style   : 'padding: 15px 0px 0px 0px',
+        width   : 600,
+        height  : 300, 
+        showMax : true,
+        onToggle: function (event) {
+            $(w2ui.add_attachment.box).hide();
+            event.onComplete = function () {
+                $(w2ui.add_bulk.box).show();
+                w2ui.add_bulk.resize();
+            }
+        },
+        onOpen: function (event) {
+            event.onComplete = function () {
+                // specifying an onOpen handler instead is equivalent to specifying an onBeforeOpen handler, which would make this code execute too early and hence not deliver.
+                $('#w2ui-popup #form').w2render('add_bulk');
+            }
+        }
+    });
+    return false;
   },
 
   get_documents = function(parent_id_to, parent_id_from) {

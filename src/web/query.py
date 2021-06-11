@@ -334,6 +334,57 @@ def add_document(db, user_id, project_id, document_type, name, parent_id, predec
 
   return document
 
+def _fake_root(db, project_id):
+  FakeRoot = collections.namedtuple('FakeRoot', ['id', 'children', 'predecessor'])
+  return FakeRoot(-1, db.query(model.Document).filter((model.Document.parent_id == None) & (model.Document.project_id == project_id)), -1)
+
+def _add_bulk_document(db, user_id, project_id, name, content):
+  folders = name.split('/')[:-1]
+  filename = name.split('/')[-1]
+
+  # get a fake root
+  root = _fake_root(db, project_id)
+  for folder in folders:
+    item_found = False
+    for child in root.children:
+      if child.document_type == 'folder' and child.name == folder:
+        root = child
+        item_found = True
+        break
+    if not item_found:
+      root = add_document(db, user_id, project_id, 'folder', folder, root.id, -1)
+
+  # now add document
+  new_document = add_document(db, user_id, project_id, 'document', filename, root.id, -1)
+  # and content
+  new_document.content = '\n'.join(content)
+  db.commit()
+
+def add_bulk(db, user_id, project_id, attachments):
+  user = db.query(model.User).filter(model.User.id == user_id).first()
+  if user is None:
+    raise QueryException("Authentication failed")
+
+  project, access = get_project_access(db, project_id, user_id, ACCESS_WRITE)
+
+  # now add each document found in each attachment
+  for attachment in attachments:
+    decoded = base64.b64decode(attachment["content"]).decode()
+    document_name = None
+    content = []
+    for line in decoded.split('\n'):
+      if line.startswith('# '):
+        if document_name is not None:
+          _add_bulk_document(db, user_id, project_id, document_name, content)
+        document_name = line[2:]
+        content = []
+      else:
+        content.append(line)
+    if document_name is not None:
+      _add_bulk_document(db, user_id, project_id, document_name, content)
+
+  db.commit()
+
 def add_attachments(db, user_id, project_id, document_id, attachments):
   user = db.query(model.User).filter(model.User.id == user_id).first()
   if user is None:

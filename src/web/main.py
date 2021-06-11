@@ -235,6 +235,10 @@ def set_data(category):
             query.delete_attachment(db(), authenticator.user_id(flask.session), project_id, attachment_id)
             return flask.jsonify(status="success")
 
+        if category == 'bulk': # upload multiple documents
+            req = json.loads(flask.request.form['request'])
+            query.add_bulk(db(), authenticator.user_id(flask.session), req['record']['project_id'], req['record']['file'])
+            return flask.jsonify(status="success")
 
     except query.AccessException as ex:
         return flask.jsonify(status="access", message=ex.message)
