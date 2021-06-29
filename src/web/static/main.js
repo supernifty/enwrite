@@ -1074,7 +1074,7 @@ var
     w2ui.main_toolbar.insert('menu_last', { type: 'menu', text: 'Add', id: 'menu_add', icon: 'fas fa-plus', items: [
       { text: 'New Folder', id: 'add_folder', icon: 'fas fa-folder'},
       { text: 'New Document', id: 'add_document', icon: 'fas fa-file'},
-      { text: 'Upload Bulk', id: 'add_bulk', icon: 'fas fa-file-upload'}
+      { text: 'Upload Bulk', id: 'add_bulk', icon: 'fas fa-copy'}
     ]});
 
     w2ui.main_toolbar.insert('menu_last', { type: 'menu', id: 'menu_document', caption: 'Document', img: 'icon-page', items: [

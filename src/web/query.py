@@ -341,6 +341,11 @@ def _fake_root(db, project_id):
 def _add_bulk_document(db, user_id, project_id, name, content):
   folders = name.split('/')[:-1]
   filename = name.split('/')[-1]
+  rating = None
+
+  if content[0].startswith('rating: '):
+    rating = int(content[1].split(': ')[1])
+    content.pop(0)
 
   # get a fake root
   root = _fake_root(db, project_id)
@@ -358,6 +363,8 @@ def _add_bulk_document(db, user_id, project_id, name, content):
   new_document = add_document(db, user_id, project_id, 'document', filename, root.id, -1)
   # and content
   new_document.content = '\n'.join(content)
+  if rating is not None:
+    new_document.rating = rating
   db.commit()
 
 def add_bulk(db, user_id, project_id, attachments):

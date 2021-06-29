@@ -72,7 +72,7 @@ def shutdown_session(exception=None):
 @app.before_request
 def make_session_permanent():
     flask.session.permanent = True
-    app.permanent_session_lifetime = datetime.timedelta(hours=24)
+    app.permanent_session_lifetime = datetime.timedelta(hours=24*30) # one month
 
 ### program logic
 # main summary page
