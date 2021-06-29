@@ -344,7 +344,7 @@ def _add_bulk_document(db, user_id, project_id, name, content):
   rating = None
 
   if content[0].startswith('rating: '):
-    rating = int(content[1].split(': ')[1])
+    rating = int(content[0].split(': ')[1])
     content.pop(0)
 
   # get a fake root
